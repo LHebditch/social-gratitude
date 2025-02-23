@@ -8,7 +8,8 @@ export class CdkStack extends Stack {
     super(scope, id, props);
 
     // S3 bucket for future use
-    new s3.Bucket(this, "social-gratitude-bucket", {
+    new s3.Bucket(this, "artifacts-bucket", {
+      bucketName: "artifacts",
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,

@@ -9,3 +9,4 @@ export type User = SignupPayload & {
   id: string;
   createdDate: string;
 };
+

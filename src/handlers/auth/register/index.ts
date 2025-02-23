@@ -28,7 +28,7 @@ const handleError = (e: unknown) => {
     }
 
     if (e instanceof MisconfiguredServiceError || e instanceof DynamoPutError) {
-        console.error(e.message);
+        console.error('Failed to create new user: ', e.message);
         return APIResponse(500);
     }
 
@@ -44,11 +44,8 @@ const saveNewUser = async (user: User): Promise<void> => {
         await DYNAMO.put({
             TableName: process.env.AUTH_TABLE_NAME,
             Item: user,
-            ConditionExpression: "#pk != :pk",
-            ExpressionAttributeNames: { "#pk": "_pk" },
-            ExpressionAttributeValues: {
-                ":pk": user._pk,
-            },
+            ConditionExpression: "attribute_not_exists(#pk)",
+            ExpressionAttributeNames: { "#pk": "_pk" }
         }).promise();
     } catch (e: unknown) {
         if (e instanceof Error) {

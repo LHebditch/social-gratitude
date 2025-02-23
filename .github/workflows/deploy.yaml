@@ -9,7 +9,7 @@ env:
   AWS_ACCOUNT: 390403855196
 
 jobs:
-  synth:
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       id-token: write

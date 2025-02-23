@@ -7,7 +7,7 @@ export class CdkStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const uid: string = Names.uniqueId(this);
+    const uid: string = Names.uniqueId(scope);
 
     // S3 bucket for future use
     new s3.Bucket(this, "artifacts-bucket", {

@@ -29,7 +29,7 @@ export const BuildAuthStack = (scope: Stack) => {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
         functionName: `auth-register-${stack.node.addr}`,
-        entry: '../src/handlers/register/index.ts',
+        entry: '../src/handlers/auth/register/index.ts',
         environment: {
             AUTH_TABLE_NAME: 'something..........'
         },

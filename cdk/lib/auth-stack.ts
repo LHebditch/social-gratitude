@@ -31,10 +31,7 @@ export const BuildAuthStack = (scope: Stack) => {
         functionName: `auth-register-${stack.node.addr}`,
         entry: '../src/handlers/auth/register/index.ts',
         environment: {
-            AUTH_TABLE_NAME: 'something..........'
-        },
-        bundling: {
-            externalModules: ["@aws-lambda-powertools/logger", "@middy/core"],
+            AUTH_TABLE_NAME: table.tableName,
         },
         timeout: Duration.millis(3000),
     })

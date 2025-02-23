@@ -2,6 +2,7 @@ import { Names, Stack, StackProps, aws_s3 as s3 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 import { RemovalPolicy } from "aws-cdk-lib";
+import { BuildAuthStack } from "./auth-stack";
 
 const RESOURCE_PREFIX = "sograt";
 
@@ -18,5 +19,7 @@ export class CdkStack extends Stack {
       versioned: true,
       removalPolicy: RemovalPolicy.RETAIN,
     });
+
+    BuildAuthStack(this);
   }
 }

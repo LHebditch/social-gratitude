@@ -1,4 +1,4 @@
-name: PR Checks
+name: Deploy
 on:
   push:
     branches:
@@ -41,4 +41,4 @@ jobs:
         env:
           AWS_ENVIRONMENT: DEV
           AWS_ACCOUNT: ${{ env.AWS_ACCOUNT }}
-        run: npx cdk apply
+        run: npx cdk deploy

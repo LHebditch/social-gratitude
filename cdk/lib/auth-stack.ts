@@ -8,10 +8,12 @@ import {
     aws_logs as logs,
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_integrations,
+    aws_apigatewayv2_authorizers,
 } from "aws-cdk-lib"
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
+const { HttpIamAuthorizer } = aws_apigatewayv2_authorizers;
 
 export const BuildAuthStack = (scope: Stack) => {
     const stack = new NestedStack(scope, "auth-stack");
@@ -61,6 +63,7 @@ export const BuildAuthStack = (scope: Stack) => {
     };
     const authApi = new apigwv2.HttpApi(stack, "auth-api", {
         corsPreflight: corsOptions,
+        defaultAuthorizer: new HttpIamAuthorizer(),
     });
 
     // API Routes //
@@ -68,6 +71,12 @@ export const BuildAuthStack = (scope: Stack) => {
         path: '/register',
         methods: [apigwv2.HttpMethod.POST],
         integration: new HttpLambdaIntegration("auth-register-function", registerFn),
+    });
+
+    new apigwv2.HttpStage(stack, 'auth-api-v1-stage', {
+        httpApi: authApi,
+        stageName: 'v1',
+        description: 'version 1 stage for auth api',
     });
 };
 

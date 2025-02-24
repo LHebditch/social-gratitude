@@ -10,3 +10,15 @@ export type User = SignupPayload & {
   createdDate: string;
 };
 
+export type LoginPayload = {
+  email: string
+  token?: string
+}
+
+export type AuthToken = {
+  _pk: string;
+  _sk: string;
+  token: string;
+  attempts: number;
+  _ttl: number;
+}

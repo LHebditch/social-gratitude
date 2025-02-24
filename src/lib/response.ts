@@ -1,4 +1,4 @@
-export const APIResponse = (status: number, body?: string) => {
+export const APIResponse = (status: number, body?: any) => {
   return {
     statusCode: status,
     body,

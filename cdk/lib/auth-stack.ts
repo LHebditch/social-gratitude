@@ -7,6 +7,7 @@ import {
     aws_dynamodb as db,
     aws_logs as logs,
     aws_apigatewayv2 as apigwv2,
+    aws_kms as kms,
     aws_apigatewayv2_integrations,
     aws_apigatewayv2_authorizers,
 } from "aws-cdk-lib"
@@ -35,6 +36,12 @@ export const BuildAuthStack = (scope: Stack) => {
     };
     const table = new db.Table(stack, tableName, props);
 
+    // KMS //
+    const authKMSKey = new kms.Key(stack, "auth-login-pipline-key", {
+        alias: 'auth-pipeline',
+        enableKeyRotation: false, // change?
+    });
+
     // FUNCTIONS //
     const registerFn = new lambda.NodejsFunction(stack, 'register-new-user-function', {
         runtime: Runtime.NODEJS_22_X,
@@ -49,6 +56,23 @@ export const BuildAuthStack = (scope: Stack) => {
 
     addLogGRoup(stack, "auth-register-function", registerFn);
     table.grantReadWriteData(registerFn);
+
+    const loginFn = new lambda.NodejsFunction(stack, 'login-new-user-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `auth-login-${stack.node.addr}`,
+        entry: '../src/handlers/auth/login/index.ts',
+        environment: {
+            AUTH_TABLE_NAME: table.tableName,
+            TOKEN_TTL_MINUTES: '15',
+            AUTH_KMS_KEY_ID: authKMSKey.keyId,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGRoup(stack, "auth-login-function", loginFn);
+    table.grantReadWriteData(loginFn);
+    authKMSKey.grantEncrypt(loginFn);
 
     // API //
     const corsOptions = {
@@ -71,6 +95,12 @@ export const BuildAuthStack = (scope: Stack) => {
         path: '/register',
         methods: [apigwv2.HttpMethod.POST],
         integration: new HttpLambdaIntegration("auth-register-function", registerFn),
+    });
+
+    authApi.addRoutes({
+        path: '/login',
+        methods: [apigwv2.HttpMethod.POST],
+        integration: new HttpLambdaIntegration("auth-login-function", loginFn),
     });
 
     new apigwv2.HttpStage(stack, 'auth-api-v1-stage', {

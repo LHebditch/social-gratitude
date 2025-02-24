@@ -15,3 +15,21 @@ export class DynamoPutError extends Error {
     super(message, options);
   }
 }
+
+export class DynamoGetError extends Error {
+  constructor(message?: string, options?: ErrorOptions) {
+    super(message, options);
+  }
+}
+
+export class KMSEncryptError extends Error {
+  constructor(message?: string, options?: ErrorOptions) {
+    super(message, options);
+  }
+}
+
+export class NotFoundError extends Error {
+  constructor(message?: string, options?: ErrorOptions) {
+    super(message, options);
+  }
+}

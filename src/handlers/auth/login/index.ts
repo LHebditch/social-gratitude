@@ -75,9 +75,9 @@ const sendTokenEmail = async (token: number, email: string) => {
                     }
                 }
             },
-            Source: 'noreply@l-h-solutions.awsapps.com',
+            Source: 'lyndonhebditch@gmail.com',
         }
-        await ses.sendEmail(params).promise()
+        await ses.sendEmail(params).promise();
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new SendEmailError(e.message)

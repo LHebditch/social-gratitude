@@ -8,6 +8,7 @@ import {
     aws_logs as logs,
     aws_apigatewayv2 as apigwv2,
     aws_kms as kms,
+    aws_iam as iam,
     aws_apigatewayv2_integrations,
     aws_apigatewayv2_authorizers,
 } from "aws-cdk-lib"
@@ -73,6 +74,11 @@ export const BuildAuthStack = (scope: Stack) => {
     addLogGRoup(stack, "auth-login-function", loginFn);
     table.grantReadWriteData(loginFn);
     authKMSKey.grantEncrypt(loginFn);
+    loginFn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'SES:SendRawEmail'],
+        resources: ['*'],
+        effect: iam.Effect.ALLOW,
+    }));
 
     // API //
     const corsOptions = {

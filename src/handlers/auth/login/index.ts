@@ -24,6 +24,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
         const encryptedToken = await encryptToken(token);
         const tokenId = await saveToken(encryptedToken, email)
         await sendTokenEmail(token, email);
+        console.log('succesfully sent token');
         return APIResponse(200, { tokenId });
     } catch (e: unknown) {
         console.error("an error has occured")

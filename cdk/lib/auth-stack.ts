@@ -40,11 +40,14 @@ export const BuildAuthStack = (scope: Stack) => {
         timeout: Duration.millis(3000),
     })
 
-    new logs.LogGroup(scope, 'register-new-user-function-loggroup', {
-        logGroupName: `/aws/lambda/${registerLambda.functionName}`,
+    addLogGRoup(stack, "auth-register-function", registerLambda)
+    table.grantReadWriteData(registerLambda);
+}
+
+const addLogGRoup = (stack: Stack, name: string, lambda: lambda.NodejsFunction) => {
+    new logs.LogGroup(stack, `${name}-loggroup`, {
+        logGroupName: `/aws/lambda/${lambda.functionName}`,
         retention: logs.RetentionDays.THREE_MONTHS,
         removalPolicy: RemovalPolicy.DESTROY
     });
-
-    table.grantReadWriteData(registerLambda);
 }

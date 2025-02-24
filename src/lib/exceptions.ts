@@ -33,3 +33,9 @@ export class NotFoundError extends Error {
     super(message, options);
   }
 }
+
+export class SendEmailError extends Error {
+  constructor(message?: string, options?: ErrorOptions) {
+    super(message, options);
+  }
+}

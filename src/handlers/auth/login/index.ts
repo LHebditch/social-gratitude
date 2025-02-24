@@ -1,6 +1,6 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { APIResponse } from "../../../lib/response";
-import { BadRequestError, DynamoGetError, DynamoPutError, KMSEncryptError, MisconfiguredServiceError, NotFoundError } from "../../../lib/exceptions";
+import { BadRequestError, DynamoGetError, DynamoPutError, KMSEncryptError, MisconfiguredServiceError, NotFoundError, SendEmailError } from "../../../lib/exceptions";
 import { AuthToken, LoginPayload } from "../../../lib/models/user";
 import crypto from 'crypto'
 import KMS from "aws-sdk/clients/kms";
@@ -13,6 +13,7 @@ const kms = new KMS()
 const ses = new SES();
 
 export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
+    console.log('Initiating login')
     try {
         const { email } = parseBody(ev.body)
         await checkForUser(email)
@@ -23,8 +24,26 @@ export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
         await sendTokenEmail(token, email);
         return APIResponse(200, { tokenId });
     } catch (e: unknown) {
-        return APIResponse(500, "something aweful's happened...");
+        return handleError(e)
     }
+}
+
+const handleError = (e: unknown) => {
+    if (e instanceof BadRequestError) {
+        return APIResponse(400, e.message);
+    }
+
+    if (e instanceof MisconfiguredServiceError || e instanceof DynamoPutError || e instanceof KMSEncryptError) {
+        console.error('Failed to initiate login: ', e.message);
+        return APIResponse(500);
+    }
+
+    if (e instanceof DynamoGetError) {
+        console.error('no user found. cannot initiate login')
+    }
+
+    console.error("An unknown error has occured");
+    return APIResponse(500, "something aweful's happened...");
 }
 
 const sendTokenEmail = async (token: number, email: string) => {
@@ -56,7 +75,10 @@ const sendTokenEmail = async (token: number, email: string) => {
         }
         ses.sendEmail(params).promise()
     } catch (e: unknown) {
-
+        if (e instanceof Error) {
+            throw new SendEmailError(e.message)
+        }
+        throw e;
     }
 }
 

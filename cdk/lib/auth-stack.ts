@@ -63,7 +63,7 @@ export const BuildAuthStack = (scope: Stack) => {
     };
     const authApi = new apigwv2.HttpApi(stack, "auth-api", {
         corsPreflight: corsOptions,
-        defaultAuthorizer: new HttpIamAuthorizer(),
+        // defaultAuthorizer: new HttpIamAuthorizer(),
     });
 
     // API Routes //

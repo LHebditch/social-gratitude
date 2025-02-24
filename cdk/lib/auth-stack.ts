@@ -77,6 +77,7 @@ export const BuildAuthStack = (scope: Stack) => {
         httpApi: authApi,
         stageName: 'v1',
         description: 'version 1 stage for auth api',
+        autoDeploy: true,
     });
 };
 

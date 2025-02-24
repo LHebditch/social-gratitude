@@ -15,7 +15,6 @@ import {
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
-const { HttpIamAuthorizer } = aws_apigatewayv2_authorizers;
 
 export const BuildAuthStack = (scope: Stack) => {
     const stack = new NestedStack(scope, "auth-stack");
@@ -75,7 +74,7 @@ export const BuildAuthStack = (scope: Stack) => {
     table.grantReadWriteData(loginFn);
     authKMSKey.grantEncrypt(loginFn);
     loginFn.addToRolePolicy(new iam.PolicyStatement({
-        actions: ['ses:SendEmail', 'SES:SendRawEmail'],
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
         resources: ['*'],
         effect: iam.Effect.ALLOW,
     }));

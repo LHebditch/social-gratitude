@@ -19,12 +19,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
         const { email } = parseBody(ev.body)
         await checkForUser(email)
         // generate cryptographically safe OTP token
-        const token = crypto.randomInt(100000, 999999)
+        console.log("generate token")
+        const token = crypto.randomInt(100000, 999999);
         const encryptedToken = await encryptToken(token);
         const tokenId = await saveToken(encryptedToken, email)
         await sendTokenEmail(token, email);
         return APIResponse(200, { tokenId });
     } catch (e: unknown) {
+        console.error("an error has occured")
         return handleError(e)
     }
 }
@@ -48,6 +50,7 @@ const handleError = (e: unknown) => {
 }
 
 const sendTokenEmail = async (token: number, email: string) => {
+    console.log("attempt to send email")
     try {
         const params = {
             Destination: {
@@ -74,7 +77,7 @@ const sendTokenEmail = async (token: number, email: string) => {
             },
             Source: 'noreply@l-h-solutions.awsapps.com',
         }
-        ses.sendEmail(params).promise()
+        await ses.sendEmail(params).promise()
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new SendEmailError(e.message)
@@ -84,6 +87,7 @@ const sendTokenEmail = async (token: number, email: string) => {
 }
 
 const encryptToken = async (token: number): Promise<string> => {
+    console.log("attept to encrypt token")
     if (!process.env.AUTH_KMS_KEY_ID) {
         throw new MisconfiguredServiceError("Missing kms environment variables");
     }
@@ -106,6 +110,7 @@ const encryptToken = async (token: number): Promise<string> => {
 }
 
 const checkForUser = async (email: string) => {
+    console.log("check user exists")
     if (!process.env.AUTH_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
@@ -131,6 +136,7 @@ const checkForUser = async (email: string) => {
 }
 
 const saveToken = async (token: string, email: string) => {
+    console.log("attempt to save token")
     if (!process.env.AUTH_TABLE_NAME || !process.env.TOKEN_TTL_MINUTES) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
@@ -160,6 +166,7 @@ const saveToken = async (token: string, email: string) => {
 }
 
 const parseBody = (body?: string): LoginPayload => {
+    console.log("parsing body")
     const badRequestError = "Invalid login request";
     if (!body) {
         throw new BadRequestError(badRequestError);

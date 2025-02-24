@@ -1,10 +1,11 @@
-import { APIGatewayProxyHandlerV2 } from "aws-lambda";
+import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { APIResponse } from "../../../lib/response";
 import { BadRequestError, DynamoGetError, DynamoPutError, KMSEncryptError, MisconfiguredServiceError, NotFoundError, SendEmailError } from "../../../lib/exceptions";
-import { AuthToken, LoginPayload } from "../../../lib/models/user";
+import type { AuthToken, LoginPayload } from "../../../lib/models/user";
 import crypto from 'crypto'
-import KMS from "aws-sdk/clients/kms";
 import { v4 as uuidv4 } from "uuid";
+// aws
+import KMS from "aws-sdk/clients/kms";
 import dynamodb from "aws-sdk/clients/dynamodb";
 import SES from "aws-sdk/clients/ses";
 
@@ -48,7 +49,7 @@ const handleError = (e: unknown) => {
 
 const sendTokenEmail = async (token: number, email: string) => {
     try {
-        const params: SES.Types.SendEmailRequest = {
+        const params = {
             Destination: {
                 ToAddresses: [
                     email,

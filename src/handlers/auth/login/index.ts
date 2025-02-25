@@ -39,12 +39,13 @@ const handleError = (e: unknown) => {
     }
 
     if (e instanceof MisconfiguredServiceError || e instanceof DynamoPutError || e instanceof KMSEncryptError) {
-        console.error('Failed to initiate login: ', e.message);
+        console.error('failed to initiate login: ', e.message);
         return APIResponse(500);
     }
 
     if (e instanceof DynamoGetError) {
         console.error('no user found. cannot initiate login')
+        return APIResponse(404);
     }
 
     console.error("An unknown error has occured");

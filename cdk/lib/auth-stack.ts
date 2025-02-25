@@ -9,6 +9,7 @@ import {
     aws_apigatewayv2 as apigwv2,
     aws_kms as kms,
     aws_iam as iam,
+    aws_ssm as ssm,
     aws_apigatewayv2_integrations,
 } from "aws-cdk-lib"
 import { Runtime } from "aws-cdk-lib/aws-lambda";
@@ -34,12 +35,23 @@ export const BuildAuthStack = (scope: Stack) => {
         timeToLiveAttribute: '_ttl',
     };
     const table = new db.Table(stack, tableName, props);
+    // TODO do we want this gsi?
+    // table.addGlobalSecondaryIndex({
+    //     indexName: "gsi1",
+    //     partitionKey: {
+    //         name: "gsi1",
+    //         type: db.AttributeType.STRING,
+    //     },
+    // });
 
     // KMS //
     const authKMSKey = new kms.Key(stack, "auth-login-pipline-key", {
         alias: 'auth-pipeline',
         enableKeyRotation: false, // change?
     });
+
+    // PARAM STORE //
+    const jwtSecret = ssm.StringParameter.valueForStringParameter(stack, '/auth/jwt-param')
 
     // FUNCTIONS //
     const registerFn = new lambda.NodejsFunction(stack, 'register-new-user-function', {
@@ -53,7 +65,7 @@ export const BuildAuthStack = (scope: Stack) => {
         timeout: Duration.millis(3000),
     });
 
-    addLogGRoup(stack, "auth-register-function", registerFn);
+    addLogGroup(stack, "auth-register-function", registerFn);
     table.grantReadWriteData(registerFn);
 
     const loginFn = new lambda.NodejsFunction(stack, 'login-new-user-function', {
@@ -70,7 +82,7 @@ export const BuildAuthStack = (scope: Stack) => {
         timeout: Duration.millis(3000),
     });
 
-    addLogGRoup(stack, "auth-login-function", loginFn);
+    addLogGroup(stack, "auth-login-function", loginFn);
     table.grantReadWriteData(loginFn);
     authKMSKey.grantEncrypt(loginFn);
     loginFn.addToRolePolicy(new iam.PolicyStatement({
@@ -78,6 +90,24 @@ export const BuildAuthStack = (scope: Stack) => {
         resources: ['*'],
         effect: iam.Effect.ALLOW,
     }));
+
+    const loginConfirmFn = new lambda.NodejsFunction(stack, 'login-confirm-new-user-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `auth-login-confirm-${stack.node.addr}`,
+        entry: '../src/handlers/auth/login-confirm/index.ts',
+        environment: {
+            AUTH_TABLE_NAME: table.tableName,
+            AUTH_KMS_KEY_ID: authKMSKey.keyId,
+            MAX_LOGIN_ATTEMPTS: '3',
+            JWT_SECRET: jwtSecret,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "auth-login-confirm-function", loginConfirmFn);
+    table.grantReadWriteData(loginConfirmFn);
+    authKMSKey.grantDecrypt(loginConfirmFn);
 
     // API //
     const corsOptions = {
@@ -108,6 +138,12 @@ export const BuildAuthStack = (scope: Stack) => {
         integration: new HttpLambdaIntegration("auth-login-function", loginFn),
     });
 
+    authApi.addRoutes({
+        path: '/login/{tokenId}',
+        methods: [apigwv2.HttpMethod.POST],
+        integration: new HttpLambdaIntegration("auth-login-confirm-function", loginConfirmFn),
+    });
+
     new apigwv2.HttpStage(stack, 'auth-api-v1-stage', {
         httpApi: authApi,
         stageName: 'v1',
@@ -116,7 +152,7 @@ export const BuildAuthStack = (scope: Stack) => {
     });
 };
 
-const addLogGRoup = (stack: Stack, name: string, lambda: lambda.NodejsFunction) => {
+const addLogGroup = (stack: Stack, name: string, lambda: lambda.NodejsFunction) => {
     new logs.LogGroup(stack, `${name}-loggroup`, {
         logGroupName: `/aws/lambda/${lambda.functionName}`,
         retention: logs.RetentionDays.THREE_MONTHS,

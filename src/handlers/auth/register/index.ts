@@ -30,7 +30,7 @@ const handleError = (e: unknown) => {
     }
 
     if (e instanceof MisconfiguredServiceError || e instanceof DynamoPutError) {
-        console.error('Failed to create new user: ', e.message);
+        console.error('failed to create new user: ', e.message);
         return APIResponse(500);
     }
 
@@ -59,9 +59,10 @@ const saveNewUser = async (user: User): Promise<void> => {
 };
 
 const buildDTO = (payload: SignupPayload): User => {
+    const id = uuidv4()
     return {
         ...payload,
-        id: uuidv4(),
+        id,
         _pk: `user/${payload.email}`,
         _sk: `USER`,
         createdDate: new Date().toISOString(),

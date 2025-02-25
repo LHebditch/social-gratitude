@@ -36,7 +36,7 @@ jobs:
       - name: test role
         run: aws sts get-caller-identity
 
-      - name: synth
+      - name: deploy
         working-directory: cdk
         env:
           AWS_ENVIRONMENT: DEV

@@ -67,7 +67,7 @@ export const BuildAuthStack = (scope: Stack) => {
     addLogGroup(stack, "auth-register-function", registerFn);
     table.grantReadWriteData(registerFn);
 
-    const loginFn = new lambda.NodejsFunction(stack, 'login-function', {
+    const loginFn = new lambda.NodejsFunction(stack, 'auth-login-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
         functionName: `auth-login-${stack.node.addr}`,
@@ -90,7 +90,7 @@ export const BuildAuthStack = (scope: Stack) => {
         effect: iam.Effect.ALLOW,
     }));
 
-    const loginConfirmFn = new lambda.NodejsFunction(stack, 'login-confirm-function', {
+    const loginConfirmFn = new lambda.NodejsFunction(stack, 'auth-login-confirm-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
         functionName: `auth-login-confirm-${stack.node.addr}`,
@@ -134,13 +134,13 @@ export const BuildAuthStack = (scope: Stack) => {
     authApi.addRoutes({
         path: '/login',
         methods: [apigwv2.HttpMethod.POST],
-        integration: new HttpLambdaIntegration("auth-login-function", loginFn),
+        integration: new HttpLambdaIntegration("auth-login-function-integration", loginFn),
     });
 
     authApi.addRoutes({
         path: '/login/{tokenId}',
         methods: [apigwv2.HttpMethod.POST],
-        integration: new HttpLambdaIntegration("auth-login-confirm-function", loginConfirmFn),
+        integration: new HttpLambdaIntegration("auth-login-confirm-function-integration", loginConfirmFn),
     });
 
     new apigwv2.HttpStage(stack, 'auth-api-v1-stage', {

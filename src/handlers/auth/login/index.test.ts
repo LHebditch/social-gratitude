@@ -31,6 +31,7 @@ describe('test login', () => {
             AUTH_TABLE_NAME: 'authTable',
             TOKEN_TTL_MINUTES: '15',
             AUTH_KMS_KEY_ID: 'some-key',
+            SOURCE_EMAIL: 'test@test.com'
         };
     });
 

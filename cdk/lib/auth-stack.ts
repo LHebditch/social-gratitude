@@ -10,7 +10,6 @@ import {
     aws_kms as kms,
     aws_iam as iam,
     aws_apigatewayv2_integrations,
-    aws_apigatewayv2_authorizers,
 } from "aws-cdk-lib"
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 
@@ -66,6 +65,7 @@ export const BuildAuthStack = (scope: Stack) => {
             AUTH_TABLE_NAME: table.tableName,
             TOKEN_TTL_MINUTES: '15',
             AUTH_KMS_KEY_ID: authKMSKey.keyId,
+            SOURCE_EMAIL: 'noreply@l-h-solutions.awsapps.com'
         },
         timeout: Duration.millis(3000),
     });

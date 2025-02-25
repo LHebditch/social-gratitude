@@ -52,6 +52,9 @@ const handleError = (e: unknown) => {
 
 const sendTokenEmail = async (token: number, email: string) => {
     console.log("attempt to send email")
+    if (!process.env.SOURCE_EMAIL) {
+        throw new MisconfiguredServiceError("Missing ses environment variables");
+    }
     try {
         const params = {
             Destination: {
@@ -76,7 +79,7 @@ const sendTokenEmail = async (token: number, email: string) => {
                     }
                 }
             },
-            Source: 'lyndonhebditch@gmail.com',
+            Source: process.env.SOURCE_EMAIL,
         }
         await ses.sendEmail(params).promise();
     } catch (e: unknown) {

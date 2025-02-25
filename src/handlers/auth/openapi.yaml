@@ -1,0 +1,122 @@
+openapi: 3.0.3
+info:
+  title: Social gratitude auth api
+  description: Api used for gaining access to social gratiitude resources
+  version: 0.0.0
+
+servers:
+  - url: https://qlkgoearl3.execute-api.eu-west-1.amazonaws.com/v1
+    description: DEV
+
+paths:
+  /register:
+    post:
+      summary: registers new user in database.
+      requestBody:
+        description: basic information we need for the user
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewUser"
+      responses:
+        "500":
+          description: the service is broken - potentially misconfigured
+        "400":
+          description: expected body has not been provided
+        "201":
+          description: new user has been created
+  /login:
+    post:
+      summary: Initiate login flow.
+      requestBody:
+        description: information required for logging in
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginStart"
+      responses:
+        "500":
+          description: the service is broken - potentially misconfigured
+        "400":
+          description: expected body has not been provided
+        "404":
+          description: no user hound
+        "200":
+          description: token id that can be used tocomplete login flow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginStartResponse"
+  /login/{tokenId}:
+    post:
+      summary: Complete login flow.
+      parameters:
+        - $ref: "#/components/parameters/TokenId"
+      requestBody:
+        description: provide token that would have been emailed to user
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginComplete"
+      responses:
+        "500":
+          description: the service is broken - potentially misconfigured
+        "400":
+          description: tokenId or expected body has not been provided
+        "410":
+          description: not authorised. provided token is wrong or max attempts have been exceeded
+        "404":
+          description: no token found for id. This could be due to expiration of token
+        "200":
+          description: jwt that can be used to access resources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginCompleteResponse"
+
+components:
+  parameters:
+    TokenId:
+      name: tokenId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    LoginCompleteResponse:
+      type: object
+      properties:
+        jwt:
+          type: string
+    LoginComplete:
+      type: object
+      properties:
+        email:
+          type: string
+        token:
+          type: number
+      required:
+        - email
+        - token
+    LoginStartResponse:
+      type: object
+      properties:
+        tokenId:
+          type: string
+    LoginStart:
+      type: object
+      properties:
+        email:
+          type: string
+      required:
+        - email
+    NewUser:
+      type: object
+      properties:
+        email:
+          type: string
+        displayName:
+          type: string
+      required:
+        - email
+        - displayName

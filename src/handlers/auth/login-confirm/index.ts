@@ -26,10 +26,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
         const storedToken = await decryptToken(encryptedToken)
         if (token === storedToken) {
-            await incrementsAttempts(authToken, maxAttempts)
+            console.log("token correctly submitted")
+            await incrementsAttempts(authToken, maxAttempts + 1)
             return APIResponse(200, { jwt: generateJWT(userId) })
         }
 
+        console.log("provided token did not match")
         await incrementsAttempts(authToken, 1)
         return APIResponse(401)
     } catch (e: unknown) {
@@ -65,7 +67,7 @@ const generateJWT = (userId: string): string => {
 }
 
 const incrementsAttempts = async (authToken: AuthToken, incr: number) => {
-    console.warn('incorrect token provided, incrementing attempts')
+    console.warn('incrementing attempts')
     if (!process.env.AUTH_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }

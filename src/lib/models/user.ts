@@ -8,6 +8,7 @@ export type User = SignupPayload & {
   _sk: string;
   id: string;
   createdDate: string;
+  gsi1: string;
 };
 
 export type LoginPayload = {
@@ -21,4 +22,5 @@ export type AuthToken = {
   token: string;
   attempts: number;
   _ttl: number;
+  userId: string;
 }

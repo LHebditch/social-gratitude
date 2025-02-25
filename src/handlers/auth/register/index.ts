@@ -66,6 +66,7 @@ const buildDTO = (payload: SignupPayload): User => {
         _pk: `user/${payload.email}`,
         _sk: `USER`,
         createdDate: new Date().toISOString(),
+        gsi1: id,
     };
 };
 

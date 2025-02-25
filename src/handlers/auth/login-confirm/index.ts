@@ -1,10 +1,3 @@
-// payload,email & token
-// get item from DB
-// decrypt
-// if same 200
-// else increment tries
-// return 401
-
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { APIResponse } from "../../../lib/response";
 import { BadRequestError, DynamoGetError, DynamoPutError, KMSDecryptError, MisconfiguredServiceError, NotFoundError } from "../../../lib/exceptions";
@@ -19,25 +12,25 @@ import { KMSClient, DecryptCommand } from "@aws-sdk/client-kms";
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
 const kms = new KMSClient()
 
-
-
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     try {
         const { tokenId } = event.pathParameters
         const { email, token } = parseBody(event.body, tokenId)
         const authToken = await getToken(email, tokenId)
-        const { attempts, token: encryptedToken } = authToken;
-        if (attempts > parseInt(process.env.MAX_LOGIN_ATTEMPTS ?? '3')) {
+        const { attempts, token: encryptedToken, userId } = authToken;
+        const maxAttempts = parseInt(process.env.MAX_LOGIN_ATTEMPTS ?? '3')
+        if (attempts > maxAttempts) {
             console.warn("max otp attempts surpassed")
             return APIResponse(401)
         }
 
         const storedToken = await decryptToken(encryptedToken)
         if (token === storedToken) {
-            return APIResponse(200, { jwt: generateJWT(email) })
+            await incrementsAttempts(authToken, maxAttempts)
+            return APIResponse(200, { jwt: generateJWT(userId) })
         }
 
-        await incrementsAttempts(authToken)
+        await incrementsAttempts(authToken, 1)
         return APIResponse(401)
     } catch (e: unknown) {
         return handleError(e)
@@ -63,15 +56,15 @@ const handleError = (e: unknown) => {
     return APIResponse(500, "something aweful's happened...");
 }
 
-const generateJWT = (email: string): string => {
+const generateJWT = (userId: string): string => {
     console.warn('generating jwt')
     if (!process.env.JWT_SECRET) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
-    return jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' })
+    return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '12h' })
 }
 
-const incrementsAttempts = async (authToken: AuthToken) => {
+const incrementsAttempts = async (authToken: AuthToken, incr: number) => {
     console.warn('incorrect token provided, incrementing attempts')
     if (!process.env.AUTH_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
@@ -82,7 +75,7 @@ const incrementsAttempts = async (authToken: AuthToken) => {
             TableName: process.env.AUTH_TABLE_NAME,
             Item: {
                 ...authToken,
-                attempts: authToken.attempts + 1,
+                attempts: authToken.attempts + incr,
             }
         })
         await dynamo.send(getCommand);

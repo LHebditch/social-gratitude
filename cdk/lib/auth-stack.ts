@@ -35,14 +35,13 @@ export const BuildAuthStack = (scope: Stack) => {
         timeToLiveAttribute: '_ttl',
     };
     const table = new db.Table(stack, tableName, props);
-    // TODO do we want this gsi?
-    // table.addGlobalSecondaryIndex({
-    //     indexName: "gsi1",
-    //     partitionKey: {
-    //         name: "gsi1",
-    //         type: db.AttributeType.STRING,
-    //     },
-    // });
+    table.addGlobalSecondaryIndex({
+        indexName: "gsi1",
+        partitionKey: {
+            name: "gsi1",
+            type: db.AttributeType.STRING,
+        },
+    });
 
     // KMS //
     const authKMSKey = new kms.Key(stack, "auth-login-pipline-key", {

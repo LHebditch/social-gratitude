@@ -1,7 +1,7 @@
 import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { APIResponse } from "../../../lib/response";
 import { BadRequestError, DynamoGetError, DynamoPutError, KMSEncryptError, MisconfiguredServiceError, NotFoundError, SendEmailError } from "../../../lib/exceptions";
-import type { AuthToken, LoginPayload } from "../../../lib/models/user";
+import type { AuthToken, LoginPayload, User } from "../../../lib/models/user";
 import crypto from 'crypto'
 import { v4 as uuidv4 } from "uuid";
 // aws
@@ -18,12 +18,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
     console.log('Initiating login')
     try {
         const { email } = parseBody(ev.body)
-        await checkForUser(email)
+        const { id } = await checkForUser(email)
         // generate cryptographically safe OTP token
         console.log("generate token")
         const token = crypto.randomInt(100000, 999999);
         const encryptedToken = await encryptToken(token);
-        const tokenId = await saveToken(encryptedToken, email)
+        const tokenId = await saveToken(encryptedToken, email, id)
         await sendTokenEmail(token, email);
         console.log('succesfully sent token');
         return APIResponse(200, { tokenId });
@@ -116,7 +116,7 @@ const encryptToken = async (token: number): Promise<string> => {
     }
 }
 
-const checkForUser = async (email: string) => {
+const checkForUser = async (email: string): Promise<User> => {
     console.log("check user exists")
     if (!process.env.AUTH_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
@@ -135,6 +135,7 @@ const checkForUser = async (email: string) => {
         if (!Item) {
             throw new NotFoundError('no user found');
         }
+        return Item as User
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new DynamoGetError(e.message)
@@ -143,7 +144,7 @@ const checkForUser = async (email: string) => {
     }
 }
 
-const saveToken = async (token: string, email: string) => {
+const saveToken = async (token: string, email: string, userId: string) => {
     console.log("attempt to save token")
     if (!process.env.AUTH_TABLE_NAME || !process.env.TOKEN_TTL_MINUTES) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
@@ -154,6 +155,7 @@ const saveToken = async (token: string, email: string) => {
         const dto: AuthToken = {
             token,
             attempts: 0,
+            userId,
             _pk: `user/${email}/token`,
             _sk: tokenId,
             _ttl: Math.floor((new Date().getTime() + parseInt(process.env.TOKEN_TTL_MINUTES) * 60 * 1000) / 1000)

@@ -5,13 +5,14 @@ import type { AuthToken, LoginPayload } from "../../../lib/models/user";
 import crypto from 'crypto'
 import { v4 as uuidv4 } from "uuid";
 // aws
-import KMS from "aws-sdk/clients/kms";
-import dynamodb from "aws-sdk/clients/dynamodb";
-import SES from "aws-sdk/clients/ses";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { KMSClient, EncryptCommand } from "@aws-sdk/client-kms";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
-const dynamo = new dynamodb.DocumentClient();
-const kms = new KMS()
-const ses = new SES();
+const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
+const kms = new KMSClient()
+const ses = new SESClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
     console.log('Initiating login')
@@ -56,7 +57,7 @@ const sendTokenEmail = async (token: number, email: string) => {
         throw new MisconfiguredServiceError("Missing ses environment variables");
     }
     try {
-        const params = {
+        const params = new SendEmailCommand({
             Destination: {
                 ToAddresses: [
                     email,
@@ -80,8 +81,8 @@ const sendTokenEmail = async (token: number, email: string) => {
                 }
             },
             Source: process.env.SOURCE_EMAIL,
-        }
-        await ses.sendEmail(params).promise();
+        });
+        await ses.send(params);
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new SendEmailError(e.message)
@@ -97,14 +98,15 @@ const encryptToken = async (token: number): Promise<string> => {
     }
 
     try {
-        const encryptedToken = await kms.encrypt({
+        const encryptCommand = new EncryptCommand({
             KeyId: process.env.AUTH_KMS_KEY_ID,
-            Plaintext: `${token}`,
-        }).promise();
-        if (!encryptedToken.CiphertextBlob) {
+            Plaintext: Buffer.from(`${token}`),
+        })
+        const { CiphertextBlob } = await kms.send(encryptCommand);
+        if (!CiphertextBlob) {
             throw new KMSEncryptError("no cypher created during encryption");
         }
-        return encryptedToken.CiphertextBlob.toString('base64');
+        return Buffer.from(CiphertextBlob).toString('base64');
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new KMSEncryptError(e.message)
@@ -120,13 +122,14 @@ const checkForUser = async (email: string) => {
     }
 
     try {
-        const { Item } = await dynamo.get({
+        const getCommand = new GetCommand({
             TableName: process.env.AUTH_TABLE_NAME,
             Key: {
                 _pk: `user/${email}`,
                 _sk: 'USER'
             }
-        }).promise();
+        });
+        const { Item } = await dynamo.send(getCommand);
 
         if (!Item) {
             throw new NotFoundError('no user found');
@@ -155,10 +158,11 @@ const saveToken = async (token: string, email: string) => {
             _ttl: Math.floor((new Date().getTime() + parseInt(process.env.TOKEN_TTL_MINUTES) * 60 * 1000) / 1000)
         }
 
-        await dynamo.put({
+        const putCommand = new PutCommand({
             TableName: process.env.AUTH_TABLE_NAME,
             Item: dto,
-        }).promise();
+        });
+        await dynamo.send(putCommand);
 
         return tokenId;
     } catch (e: unknown) {

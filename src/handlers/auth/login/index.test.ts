@@ -1,26 +1,18 @@
 
 
+import { mockClient } from 'aws-sdk-client-mock';
+import 'aws-sdk-client-mock-jest';
+
 import { handler } from ".";
 import type { APIGatewayProxyEventV2 as Event, APIGatewayProxyStructuredResultV2 as Result, Context } from "aws-lambda";
 
-jest.mock("aws-sdk/clients/kms", () => jest.fn(() => ({
-    encrypt: jest.fn(() => ({ promise: jest.fn(() => Promise.resolve({ CiphertextBlob: 'blah' })) })),
-})))
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { KMSClient, EncryptCommand } from "@aws-sdk/client-kms";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
-jest.mock("aws-sdk/clients/dynamodb", () => ({
-    DocumentClient: jest.fn(() => ({
-        get: jest.fn(() => ({ promise: jest.fn(() => Promise.resolve({ Item: {} })) })),
-        put: jest.fn(() => ({ promise: jest.fn(() => Promise.resolve()) })),
-    }))
-}))
-
-jest.mock("aws-sdk/clients/ses", () => jest.fn(() => ({
-    sendEmail: jest.fn(() => ({ promise: jest.fn(() => Promise.resolve()) })),
-})))
-
-// import KMS from "aws-sdk/clients/kms";
-// import DYNAMO from "aws-sdk/clients/dynamodb";
-// import SES from "aws-sdk/clients/ses";
+const sesMock = mockClient(SESClient)
+const dynamoMock = mockClient(DynamoDBDocumentClient)
+const kmsMock = mockClient(KMSClient)
 
 describe('test login', () => {
     const OLD_ENV = process.env;
@@ -40,6 +32,11 @@ describe('test login', () => {
     });
 
     it('should send email', async () => {
+        sesMock.on(SendEmailCommand).resolves({});
+        dynamoMock.on(PutCommand).resolves({});
+        dynamoMock.on(GetCommand).resolves({ Item: {} });
+        kmsMock.on(EncryptCommand).resolves({ CiphertextBlob: Buffer.from('test') });
+
         const input = {
             body: '{ "email": "test@test.com" }',
         } as Event;
@@ -47,5 +44,9 @@ describe('test login', () => {
         const res = await handler(input, {} as Context, jest.fn())
 
         expect((res as Result).statusCode).toBe(200)
+        expect(sesMock).toHaveReceivedCommand(SendEmailCommand)
+        expect(kmsMock).toHaveReceivedCommand(EncryptCommand)
+        expect(dynamoMock).toHaveReceivedCommand(PutCommand)
+        expect(dynamoMock).toHaveReceivedCommand(GetCommand)
     })
 })

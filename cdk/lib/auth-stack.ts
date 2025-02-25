@@ -67,7 +67,7 @@ export const BuildAuthStack = (scope: Stack) => {
     addLogGroup(stack, "auth-register-function", registerFn);
     table.grantReadWriteData(registerFn);
 
-    const loginFn = new lambda.NodejsFunction(stack, 'login-new-user-function', {
+    const loginFn = new lambda.NodejsFunction(stack, 'login-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
         functionName: `auth-login-${stack.node.addr}`,
@@ -90,7 +90,7 @@ export const BuildAuthStack = (scope: Stack) => {
         effect: iam.Effect.ALLOW,
     }));
 
-    const loginConfirmFn = new lambda.NodejsFunction(stack, 'login-confirm-new-user-function', {
+    const loginConfirmFn = new lambda.NodejsFunction(stack, 'login-confirm-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
         functionName: `auth-login-confirm-${stack.node.addr}`,

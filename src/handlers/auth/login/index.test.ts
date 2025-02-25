@@ -1,7 +1,7 @@
 
 
 import { handler } from ".";
-import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2, Context } from "aws-lambda";
+import type { APIGatewayProxyEventV2 as Event, APIGatewayProxyStructuredResultV2 as Result, Context } from "aws-lambda";
 
 jest.mock("aws-sdk/clients/kms", () => jest.fn(() => ({
     encrypt: jest.fn(() => ({ promise: jest.fn(() => Promise.resolve({ CiphertextBlob: 'blah' })) })),
@@ -42,10 +42,10 @@ describe('test login', () => {
     it('should send email', async () => {
         const input = {
             body: '{ "email": "test@test.com" }',
-        } as APIGatewayProxyEventV2;
+        } as Event;
 
         const res = await handler(input, {} as Context, jest.fn())
 
-        expect((res as APIGatewayProxyStructuredResultV2).statusCode).toBe(200)
+        expect((res as Result).statusCode).toBe(200)
     })
 })

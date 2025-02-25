@@ -7,9 +7,11 @@ import {
     MisconfiguredServiceError,
 } from "../../../lib/exceptions";
 import { SignupPayload, User } from "../../../lib/models/user";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
-import dynamodb from "aws-sdk/clients/dynamodb";
-const DYNAMO = new dynamodb.DocumentClient();
+const ddbClient = new DynamoDBClient();
+const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
 
 export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
     try {
@@ -41,12 +43,13 @@ const saveNewUser = async (user: User): Promise<void> => {
         throw new MisconfiguredServiceError("Missing dynamo environment variables");
     }
     try {
-        await DYNAMO.put({
+        const cmd = new PutCommand({
             TableName: process.env.AUTH_TABLE_NAME,
             Item: user,
             ConditionExpression: "attribute_not_exists(#pk)",
             ExpressionAttributeNames: { "#pk": "_pk" }
-        }).promise();
+        })
+        await ddbDocClient.send(cmd);
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new DynamoPutError(e.message);

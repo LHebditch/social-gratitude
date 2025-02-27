@@ -44,6 +44,7 @@ export const build = (scope: Stack) => {
             beforeBundling(inputDir, outputDir) {
                 return [
                     `cp -r ${path.join(inputDir, '../src/handlers/app/views')} ${inputDir}/views`,
+                    `mkdir ${inputDir}/src`,
                     `touch ${inputDir}/src/index.js` // create the temporary file
                 ]
             },

@@ -9,7 +9,7 @@ import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { addLogGroup } from "./shared";
 
 
-export const BuildAuthStack = (scope: Stack) => {
+export const BuildGratitudeStack = (scope: Stack) => {
     const stack = new NestedStack(scope, "gratitude-stack");
     const suffix = stack.node.addr;
 

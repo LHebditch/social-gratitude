@@ -53,7 +53,6 @@ export const build = (scope: Stack) => {
             },
             afterBundling(inputDir, outputDir) {
                 return [
-                    `cp -r ${inputDir}/views ${outputDir}`,
                     `cp -r ${inputDir}/src ${outputDir}`,
                     `mv ${path.join(outputDir, 'index.js')} ${path.join(outputDir, 'src/index.js')}`
                 ]
@@ -63,7 +62,7 @@ export const build = (scope: Stack) => {
 
     const loginPageFn = new lambda.NodejsFunction(stack, 'app-login-page-function', {
         runtime: Runtime.NODEJS_22_X,
-        handler: "index.handler",
+        handler: "src/index.handler",
         functionName: `app-login-page-${stack.node.addr}`,
         entry: '../src/handlers/app/login/index.ts',
         environment: {},

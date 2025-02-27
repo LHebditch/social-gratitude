@@ -5,7 +5,7 @@ info:
   version: 0.0.0
 
 servers:
-  - url: https://qlkgoearl3.execute-api.eu-west-1.amazonaws.com/v1
+  - url: https://xgm7vzfjx6.execute-api.eu-west-1.amazonaws.com/v1
     description: DEV
 
 paths:

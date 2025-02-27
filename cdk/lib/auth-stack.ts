@@ -13,6 +13,7 @@ import {
     aws_apigatewayv2_integrations,
 } from "aws-cdk-lib"
 import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { addLogGroup } from "./shared";
 
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 
@@ -148,13 +149,5 @@ export const BuildAuthStack = (scope: Stack) => {
         stageName: 'v1',
         description: 'version 1 stage for auth api',
         autoDeploy: true,
-    });
-};
-
-const addLogGroup = (stack: Stack, name: string, lambda: lambda.NodejsFunction) => {
-    new logs.LogGroup(stack, `${name}-loggroup`, {
-        logGroupName: `/aws/lambda/${lambda.functionName}`,
-        retention: logs.RetentionDays.THREE_MONTHS,
-        removalPolicy: RemovalPolicy.DESTROY
     });
 };

@@ -43,7 +43,7 @@ export const build = (scope: Stack) => {
         commandHooks: {
             beforeBundling(inputDir, outputDir) {
                 return [
-                    `cp -r ${path.join(inputDir, '../src/handlers/app/views')} ${inputDir}/views`,
+                    `cp -r ${path.join(inputDir, '../src/handlers/app/views')} ${inputDir}`,
                     `mkdir ${inputDir}/src`,
                     `touch ${inputDir}/src/index.js` // create the temporary file
                 ]

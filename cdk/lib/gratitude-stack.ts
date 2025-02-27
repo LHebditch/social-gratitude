@@ -53,6 +53,7 @@ export const build = (scope: Stack) => {
             },
             afterBundling(inputDir, outputDir) {
                 return [
+                    `cp -r ${inputDir}/views ${outputDir}`,
                     `cp -r ${inputDir}/src ${outputDir}`,
                     `mv ${path.join(outputDir, 'index.js')} ${path.join(outputDir, 'src/index.js')}`
                 ]

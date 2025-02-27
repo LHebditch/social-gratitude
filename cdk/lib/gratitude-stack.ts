@@ -4,11 +4,14 @@ import {
     Stack,
     aws_dynamodb as db,
     aws_lambda_nodejs as lambda,
+    aws_apigatewayv2 as apigwv2,
+    aws_apigatewayv2_integrations,
 } from "aws-cdk-lib";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { addLogGroup } from "./shared";
 import path = require("path");
 
+const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 
 export const build = (scope: Stack) => {
     const stack = new NestedStack(scope, "gratitude-stack");
@@ -44,7 +47,7 @@ export const build = (scope: Stack) => {
             beforeBundling(inputDir, outputDir) {
                 return [
                     `cp -r ${path.join(inputDir, '../src/handlers/app/views')} ${inputDir}`,
-                    `mkdir ${inputDir}/src`,
+                    `mkdir ${inputDir}/src`, // this line means synth no longer works on my machine...
                     `touch ${inputDir}/src/index.js` // create the temporary file
                 ]
             },
@@ -55,7 +58,7 @@ export const build = (scope: Stack) => {
                 return [
                     `cp -r ${inputDir}/views ${outputDir}`,
                     `cp -r ${inputDir}/src ${outputDir}`,
-                    `mv ${path.join(outputDir, 'index.js')} ${path.join(outputDir, 'src/index.js')}`
+                    `mv ${path.join(outputDir, 'index.js')} ${path.join(outputDir, 'src/index.js')}` // replace temporary file with compiled ts
                 ]
             },
         }
@@ -71,6 +74,35 @@ export const build = (scope: Stack) => {
         bundling: htmlLambdaBundling,
     });
     addLogGroup(stack, "app-login-page-function", loginPageFn);
+
+    // API //
+    const corsOptions = {
+        allowMethods: [
+            apigwv2.CorsHttpMethod.GET,
+            apigwv2.CorsHttpMethod.HEAD,
+            apigwv2.CorsHttpMethod.OPTIONS,
+            apigwv2.CorsHttpMethod.POST,
+        ],
+        allowOrigins: ['*'],
+        maxAge: Duration.days(10),
+    };
+    const gratitudeApi = new apigwv2.HttpApi(stack, "gratitude-api", {
+        corsPreflight: corsOptions,
+    });
+
+    // API Routes //
+    gratitudeApi.addRoutes({
+        path: '/login',
+        methods: [apigwv2.HttpMethod.GET],
+        integration: new HttpLambdaIntegration("gratitude-login-page", loginPageFn),
+    });
+
+    new apigwv2.HttpStage(stack, 'gratitude-api-v1-stage', {
+        httpApi: gratitudeApi,
+        stageName: 'v1',
+        description: 'version 1 stage for gratitude api',
+        autoDeploy: true,
+    });
 }
 
 export default {

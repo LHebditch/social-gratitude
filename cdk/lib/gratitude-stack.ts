@@ -9,7 +9,7 @@ import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { addLogGroup } from "./shared";
 
 
-export const BuildGratitudeStack = (scope: Stack) => {
+export const build = (scope: Stack) => {
     const stack = new NestedStack(scope, "gratitude-stack");
     const suffix = stack.node.addr;
 
@@ -46,4 +46,8 @@ export const BuildGratitudeStack = (scope: Stack) => {
         timeout: Duration.millis(3000),
     });
     addLogGroup(stack, "app-login-page-function", loginPageFn);
+}
+
+export default {
+    build,
 }

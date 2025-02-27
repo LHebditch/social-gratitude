@@ -17,7 +17,7 @@ import { addLogGroup } from "./shared";
 
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 
-export const BuildAuthStack = (scope: Stack) => {
+export const build = (scope: Stack) => {
     const stack = new NestedStack(scope, "auth-stack");
 
     // DYNAMO TABLE //
@@ -151,3 +151,7 @@ export const BuildAuthStack = (scope: Stack) => {
         autoDeploy: true,
     });
 };
+
+export default {
+    build,
+}

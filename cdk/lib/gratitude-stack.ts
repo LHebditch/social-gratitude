@@ -64,16 +64,8 @@ export const build = (scope: Stack) => {
         }
     }
 
-    const loginPageFn = new lambda.NodejsFunction(stack, 'app-login-page-function', {
-        runtime: Runtime.NODEJS_22_X,
-        handler: "src/index.handler",
-        functionName: `app-login-page-${stack.node.addr}`,
-        entry: '../src/handlers/app/login/index.ts',
-        environment: {},
-        timeout: Duration.millis(3000),
-        bundling: htmlLambdaBundling,
-    });
-    addLogGroup(stack, "app-login-page-function", loginPageFn);
+    const loginPageFn = buildHTMLLambda(stack, 'login', '../src/handlers/app/login/index.ts')
+    const journalPageFn = buildHTMLLambda(stack, 'journal', '../src/handlers/app/journal/index.ts')
 
     // API //
     const corsOptions = {
@@ -92,7 +84,13 @@ export const build = (scope: Stack) => {
 
     // API Routes //
     gratitudeApi.addRoutes({
-        path: '/login',
+        path: '/app/journal',
+        methods: [apigwv2.HttpMethod.GET],
+        integration: new HttpLambdaIntegration("gratitude-home-page", journalPageFn),
+        // authorizer: 
+    });
+    gratitudeApi.addRoutes({
+        path: '/app/login',
         methods: [apigwv2.HttpMethod.GET],
         integration: new HttpLambdaIntegration("gratitude-login-page", loginPageFn),
     });
@@ -103,6 +101,46 @@ export const build = (scope: Stack) => {
         description: 'version 1 stage for gratitude api',
         autoDeploy: true,
     });
+}
+
+const buildHTMLLambda = (
+    stack: Stack,
+    pageName: string,
+    codeLocation: string,
+    env?: { [key: string]: string },
+): lambda.NodejsFunction => {
+    // bundling options to add views to the lambdas deployed
+    const htmlLambdaBundling: lambda.BundlingOptions = {
+        commandHooks: {
+            beforeBundling(inputDir, outputDir) {
+                return [
+                    `cp -r ${path.join(inputDir, '../src/handlers/app/views')} ${inputDir}`,
+                ]
+            },
+            beforeInstall(inputDir, outputDir) {
+                return []
+            },
+            afterBundling(inputDir, outputDir) {
+                return [
+                    `cp -r ${inputDir}/views ${outputDir}`,
+                    `mkdir ${outputDir}/src`,
+                    `mv ${path.join(outputDir, 'index.js')} ${path.join(outputDir, 'src/index.js')}` // replace temporary file with compiled ts
+                ]
+            },
+        }
+    }
+
+    const l = new lambda.NodejsFunction(stack, `app-${pageName}-page-function`, {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "src/index.handler",
+        functionName: `app-${pageName}-page-${stack.node.addr}`,
+        entry: codeLocation,
+        environment: env ?? {},
+        timeout: Duration.millis(3000),
+        bundling: htmlLambdaBundling,
+    });
+    addLogGroup(stack, `app-${pageName}-page-function`, l);
+    return l;
 }
 
 export default {

@@ -124,8 +124,8 @@ const buildHTMLLambda = (
             },
             afterBundling(inputDir, outputDir) {
                 return [
-                    `cp -r ${inputDir}/views ${outputDir}`,
-                    `cp -r ${inputDir}/src ${outputDir}`,
+                    `mv -r ${inputDir}/views ${outputDir}`,
+                    `mv -r ${inputDir}/src ${outputDir}`,
                     `mv ${path.join(outputDir, 'index.js')} ${path.join(outputDir, 'src/index.js')}` // replace temporary file with compiled ts
                 ]
             },

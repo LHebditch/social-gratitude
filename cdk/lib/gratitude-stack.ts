@@ -115,8 +115,8 @@ const buildHTMLLambda = (
             beforeBundling(inputDir, outputDir) {
                 return [
                     `cp -r ${path.join(inputDir, '../src/handlers/app/views')} ${inputDir}`,
-                    `mkdir ${inputDir}/src`, // this line means synth no longer works on my machine...
-                    `touch ${inputDir}/src/index.js` // create the temporary file
+                    //`mkdir ${inputDir}/src`, /// this line means synth no longer works on my machine...
+                    //`touch ${inputDir}/src/ind/ex.js` // create the temporary file
                 ]
             },
             beforeInstall(inputDir, outputDir) {
@@ -124,8 +124,9 @@ const buildHTMLLambda = (
             },
             afterBundling(inputDir, outputDir) {
                 return [
-                    `mv /${inputDir}/views /${outputDir}`,
-                    `mv /${inputDir}/src /${outputDir}`,
+                    `cp /${inputDir}/views /${outputDir}`,
+                    `mkdir ${outputDir}/src`,
+                    // `mv /${inputDir}/src /${outputDir}`,/
                     `mv ${path.join(outputDir, 'index.js')} ${path.join(outputDir, 'src/index.js')}` // replace temporary file with compiled ts
                 ]
             },

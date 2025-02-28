@@ -84,13 +84,13 @@ export const build = (scope: Stack) => {
 
     // API Routes //
     gratitudeApi.addRoutes({
-        path: 'app/journal',
+        path: '/app/journal',
         methods: [apigwv2.HttpMethod.GET],
         integration: new HttpLambdaIntegration("gratitude-home-page", journalPageFn),
         // authorizer: 
     });
     gratitudeApi.addRoutes({
-        path: 'app/login',
+        path: '/app/login',
         methods: [apigwv2.HttpMethod.GET],
         integration: new HttpLambdaIntegration("gratitude-login-page", loginPageFn),
     });
@@ -115,8 +115,6 @@ const buildHTMLLambda = (
             beforeBundling(inputDir, outputDir) {
                 return [
                     `cp -r ${path.join(inputDir, '../src/handlers/app/views')} ${inputDir}`,
-                    //`mkdir ${inputDir}/src`, /// this line means synth no longer works on my machine...
-                    //`touch ${inputDir}/src/ind/ex.js` // create the temporary file
                 ]
             },
             beforeInstall(inputDir, outputDir) {
@@ -126,7 +124,6 @@ const buildHTMLLambda = (
                 return [
                     `cp -r ${inputDir}/views ${outputDir}`,
                     `mkdir ${outputDir}/src`,
-                    // `mv /${inputDir}/src /${outputDir}`,/
                     `mv ${path.join(outputDir, 'index.js')} ${path.join(outputDir, 'src/index.js')}` // replace temporary file with compiled ts
                 ]
             },

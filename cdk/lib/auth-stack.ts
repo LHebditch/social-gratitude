@@ -18,8 +18,6 @@ const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 const { HttpLambdaResponseType } = apiauth;
 
 export const build = (scope: Stack) => {
-    const issuer = "https://lyndons-testing.com" // this should point to our domain name
-    const audience = "lyndons-testing.com" // this should point to our domain name
     const stack = new NestedStack(scope, "auth-stack");
 
     // DYNAMO TABLE //
@@ -53,7 +51,13 @@ export const build = (scope: Stack) => {
     });
 
     // PARAM STORE //
+    type JWTConfig = {
+        secret: string;
+        aud: string;
+        iss: string;
+    }
     const jwtSecret = ssm.StringParameter.valueForStringParameter(stack, '/auth/jwt-param')
+    const jwtConfig = JSON.parse(jwtSecret) as JWTConfig;
 
     // FUNCTIONS //
     const registerFn = new lambda.NodejsFunction(stack, 'register-new-user-function', {
@@ -103,8 +107,8 @@ export const build = (scope: Stack) => {
             AUTH_KMS_KEY_ID: authKMSKey.keyId,
             MAX_LOGIN_ATTEMPTS: '3',
             JWT_SECRET: jwtSecret,
-            JWT_ISSUER: issuer,
-            JWT_AUD: audience,
+            JWT_ISSUER: jwtConfig.iss,
+            JWT_AUD: jwtConfig.aud,
         },
         timeout: Duration.millis(3000),
     });
@@ -120,8 +124,8 @@ export const build = (scope: Stack) => {
         entry: '../src/handlers/auth/jwt-authorizer/index.ts',
         environment: {
             JWT_SECRET: jwtSecret,
-            JWT_ISSUER: issuer,
-            JWT_AUD: audience,
+            JWT_ISSUER: jwtConfig.iss,
+            JWT_AUD: jwtConfig.aud,
         },
         timeout: Duration.millis(3000),
     });

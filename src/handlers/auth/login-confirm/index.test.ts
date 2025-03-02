@@ -23,6 +23,8 @@ describe('test login', () => {
             AUTH_KMS_KEY_ID: 'some-key',
             MAX_ATTEMPTS: '3',
             JWT_SECRET: 'some-secret',
+            JWT_ISSUER: 'some-iss',
+            JWT_AUD: 'some-aud',
         };
     });
 

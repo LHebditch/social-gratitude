@@ -17,8 +17,8 @@ import { addLogGroup } from "./shared";
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 
 export const build = (scope: Stack) => {
-    const issuer = "lyndons-testing.null" // this should point to our domain name
-    const audience = "lyndons-testing.null" // this should point to our domain name
+    const issuer = "https://lyndons-testing.com" // this should point to our domain name
+    const audience = "lyndons-testing.com" // this should point to our domain name
     const stack = new NestedStack(scope, "auth-stack");
 
     // DYNAMO TABLE //

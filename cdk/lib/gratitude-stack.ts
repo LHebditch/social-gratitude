@@ -13,7 +13,7 @@ import path = require("path");
 
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 
-export const build = (scope: Stack) => {
+export const build = (scope: Stack, authorizer: apigwv2.IHttpRouteAuthorizer) => {
     const stack = new NestedStack(scope, "gratitude-stack");
     const suffix = stack.node.addr;
 
@@ -87,7 +87,7 @@ export const build = (scope: Stack) => {
         path: '/app/journal',
         methods: [apigwv2.HttpMethod.GET],
         integration: new HttpLambdaIntegration("gratitude-home-page", journalPageFn),
-        // authorizer: 
+        authorizer,
     });
     gratitudeApi.addRoutes({
         path: '/app/login',

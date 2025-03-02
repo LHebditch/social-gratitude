@@ -9,6 +9,7 @@ import {
     aws_iam as iam,
     aws_ssm as ssm,
     aws_apigatewayv2_integrations,
+    aws_apigatewayv2_authorizers as apiauth,
 } from "aws-cdk-lib"
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { addLogGroup } from "./shared";
@@ -16,6 +17,7 @@ import { addLogGroup } from "./shared";
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 
 export const build = (scope: Stack) => {
+    const issuer = "lyndons-testing.null"
     const stack = new NestedStack(scope, "auth-stack");
 
     // DYNAMO TABLE //
@@ -99,6 +101,7 @@ export const build = (scope: Stack) => {
             AUTH_KMS_KEY_ID: authKMSKey.keyId,
             MAX_LOGIN_ATTEMPTS: '3',
             JWT_SECRET: jwtSecret,
+            JWT_ISSUER: issuer,
         },
         timeout: Duration.millis(3000),
     });
@@ -106,6 +109,11 @@ export const build = (scope: Stack) => {
     addLogGroup(stack, "auth-login-confirm-function", loginConfirmFn);
     table.grantReadWriteData(loginConfirmFn);
     authKMSKey.grantDecrypt(loginConfirmFn);
+
+    // AUTH
+    const authorizer = new apiauth.HttpJwtAuthorizer("gratitude-jwt-authorizer", issuer, {
+        jwtAudience: [],
+    });
 
     // API //
     const corsOptions = {
@@ -148,6 +156,10 @@ export const build = (scope: Stack) => {
         description: 'version 1 stage for auth api',
         autoDeploy: true,
     });
+
+    return {
+        authorizer,
+    }
 };
 
 export default {

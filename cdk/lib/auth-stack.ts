@@ -112,7 +112,7 @@ export const build = (scope: Stack) => {
 
     // AUTH
     const authorizer = new apiauth.HttpJwtAuthorizer("gratitude-jwt-authorizer", issuer, {
-        jwtAudience: [],
+        jwtAudience: ["app"],
     });
 
     // API //

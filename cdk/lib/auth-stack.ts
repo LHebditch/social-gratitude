@@ -56,8 +56,14 @@ export const build = (scope: Stack) => {
         aud: string;
         iss: string;
     }
-    const jwtSecret = ssm.StringParameter.valueForStringParameter(stack, '/auth/jwt-param')
-    const jwtConfig = JSON.parse(jwtSecret) as JWTConfig;
+    const jwtSecret = ssm.StringParameter.valueForStringParameter(stack, '/auth/jwt-secret')
+    const jwtIss = ssm.StringParameter.valueForStringParameter(stack, '/auth/jwt-iss')
+    const jwtAud = ssm.StringParameter.valueForStringParameter(stack, '/auth/jwt-aud')
+    const jwtConfig: JWTConfig = {
+        secret: jwtSecret,
+        iss: jwtIss,
+        aud: jwtAud
+    };
 
     // FUNCTIONS //
     const registerFn = new lambda.NodejsFunction(stack, 'register-new-user-function', {

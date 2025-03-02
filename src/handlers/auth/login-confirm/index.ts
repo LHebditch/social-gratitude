@@ -60,10 +60,10 @@ const handleError = (e: unknown) => {
 
 const generateJWT = (userId: string): string => {
     console.warn('generating jwt')
-    if (!process.env.JWT_SECRET || !process.env.JWT_ISSUER) {
+    if (!process.env.JWT_SECRET || !process.env.JWT_ISSUER || !process.env.JWT_AUD) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
-    return jwt.sign({ userId, issuer: process.env.JWT_ISSUER }, process.env.JWT_SECRET, { expiresIn: '12h' })
+    return jwt.sign({ userId, issuer: process.env.JWT_ISSUER, aud: process.env.JWT_AUD }, process.env.JWT_SECRET, { expiresIn: '12h' })
 }
 
 const incrementsAttempts = async (authToken: AuthToken, incr: number) => {

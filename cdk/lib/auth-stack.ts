@@ -17,7 +17,8 @@ import { addLogGroup } from "./shared";
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 
 export const build = (scope: Stack) => {
-    const issuer = "lyndons-testing.null"
+    const issuer = "lyndons-testing.null" // this should point to our domain name
+    const audience = "lyndons-testing.null" // this should point to our domain name
     const stack = new NestedStack(scope, "auth-stack");
 
     // DYNAMO TABLE //
@@ -102,6 +103,7 @@ export const build = (scope: Stack) => {
             MAX_LOGIN_ATTEMPTS: '3',
             JWT_SECRET: jwtSecret,
             JWT_ISSUER: issuer,
+            JWT_AUD: audience,
         },
         timeout: Duration.millis(3000),
     });

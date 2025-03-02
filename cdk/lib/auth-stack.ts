@@ -15,6 +15,7 @@ import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { addLogGroup } from "./shared";
 
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
+const { HttpLambdaResponseType } = apiauth;
 
 export const build = (scope: Stack) => {
     const issuer = "https://lyndons-testing.com" // this should point to our domain name
@@ -112,9 +113,22 @@ export const build = (scope: Stack) => {
     table.grantReadWriteData(loginConfirmFn);
     authKMSKey.grantDecrypt(loginConfirmFn);
 
+    const authorizerFn = new lambda.NodejsFunction(stack, "authorizer", {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `jwt-authorizer-${stack.node.addr}`,
+        entry: '../src/handlers/auth/jwt-authorizer/index.ts',
+        environment: {
+            JWT_SECRET: jwtSecret,
+            JWT_ISSUER: issuer,
+            JWT_AUD: audience,
+        },
+        timeout: Duration.millis(3000),
+    });
+
     // AUTH
-    const authorizer = new apiauth.HttpJwtAuthorizer("gratitude-jwt-authorizer", issuer, {
-        jwtAudience: ["app"],
+    const authorizer = new apiauth.HttpLambdaAuthorizer("jwt-authorizer", authorizerFn, {
+        responseTypes: [HttpLambdaResponseType.IAM],
     });
 
     // API //

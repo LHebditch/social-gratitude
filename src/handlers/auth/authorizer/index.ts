@@ -32,8 +32,6 @@ const checkJWT = (token: string): Promise<void> => {
             }
         });
     })
-
-
 }
 
 type AuthResponse = APIGatewayAuthorizerResult

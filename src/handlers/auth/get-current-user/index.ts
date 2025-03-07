@@ -1,8 +1,13 @@
-import { APIGatewayProxyHandlerV2 } from "aws-lambda";
+import { APIGatewayProxyHandlerV2WithLambdaAuthorizer } from "aws-lambda";
 
-export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
-    const user = ev.headers["userId"]
-    console.log(JSON.stringify(ev), undefined, 2)
+type AuthorizerResponse = {
+    userId: string
+}
+
+export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerResponse> = async (ev) => {
+    const user = ev.requestContext.authorizer.lambda.userId;
+
+    // console.log(JSON.stringify(ev, undefined, 2))
     console.log(user)
     return {
         user,

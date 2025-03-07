@@ -199,9 +199,7 @@ export const build = (scope: Stack) => {
     authApi.addRoutes({
         path: '/me',
         methods: [apigwv2.HttpMethod.GET],
-        integration: new HttpLambdaIntegration("auth-get-current-user-integration", getCurrentUserFn, {
-            parameterMapping: new ParameterMapping().appendHeader("userId", MappingValue.contextVariable("userId"))
-        }),
+        integration: new HttpLambdaIntegration("auth-get-current-user-integration", getCurrentUserFn),
         authorizer,
     });
 

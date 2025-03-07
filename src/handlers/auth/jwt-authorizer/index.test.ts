@@ -35,5 +35,6 @@ describe('test login', () => {
 
         const res = await handler(ev, null, null) as APIGatewayAuthorizerResult
         expect(res.policyDocument.Statement[0].Effect).toEqual("Allow")
+        expect(res.context.userId).toEqual("test")
     });
 })

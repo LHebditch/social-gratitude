@@ -13,6 +13,7 @@ import {
 } from "aws-cdk-lib"
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { addLogGroup } from "./shared";
+import { MappingValue, ParameterMapping } from "aws-cdk-lib/aws-apigatewayv2";
 
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 const { HttpLambdaResponseType } = apiauth;
@@ -123,6 +124,25 @@ export const build = (scope: Stack) => {
     table.grantReadWriteData(loginConfirmFn);
     authKMSKey.grantDecrypt(loginConfirmFn);
 
+    const getCurrentUserFn = new lambda.NodejsFunction(stack, 'auth-get-current-user-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `auth-get-current-user-${stack.node.addr}`,
+        entry: '../src/handlers/auth/get-current-user/index.ts',
+        environment: {
+            AUTH_TABLE_NAME: table.tableName,
+            AUTH_KMS_KEY_ID: authKMSKey.keyId,
+
+            JWT_SECRET: jwtSecret,
+            JWT_ISSUER: jwtConfig.iss,
+            JWT_AUD: jwtConfig.aud,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "auth-get-current-user-function", getCurrentUserFn);
+    table.grantReadWriteData(getCurrentUserFn);
+
     const authorizerFn = new lambda.NodejsFunction(stack, "authorizer", {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
@@ -174,6 +194,15 @@ export const build = (scope: Stack) => {
         path: '/login/{tokenId}',
         methods: [apigwv2.HttpMethod.POST],
         integration: new HttpLambdaIntegration("auth-login-confirm-function-integration", loginConfirmFn),
+    });
+
+    authApi.addRoutes({
+        path: '/me',
+        methods: [apigwv2.HttpMethod.GET],
+        integration: new HttpLambdaIntegration("auth-get-current-user-integration", getCurrentUserFn, {
+            parameterMapping: new ParameterMapping().appendHeader("userId", MappingValue.contextVariable("userId"))
+        }),
+        authorizer,
     });
 
     new apigwv2.HttpStage(stack, 'auth-api-v1-stage', {

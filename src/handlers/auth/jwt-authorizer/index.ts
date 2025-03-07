@@ -1,5 +1,5 @@
 import { APIGatewayAuthorizerHandler, APIGatewayAuthorizerResult, APIGatewayTokenAuthorizerEvent, StatementEffect } from "aws-lambda";
-import jwt from "jsonwebtoken"
+import jwt, { JwtPayload } from "jsonwebtoken"
 import { MisconfiguredServiceError } from "../../../lib/exceptions";
 
 
@@ -7,16 +7,16 @@ export const handler: APIGatewayAuthorizerHandler = async (event: APIGatewayToke
     console.info("Start JWT verification")
     try {
         console.info("Attempting to verify JWT")
-        await checkJWT(event.authorizationToken);
+        const userId = await checkJWT(event.authorizationToken);
         console.info("JWT verified succesfully")
-        return generatePolicy("user", "Allow", event.methodArn);
+        return generatePolicy("user", "Allow", event.methodArn, userId);
     } catch (e: unknown) {
         console.error(e);
-        return generatePolicy("user", "Deny", event.methodArn);
+        return generatePolicy("user", "Deny", event.methodArn, "unauthorised");
     }
 }
 
-const checkJWT = (token: string): Promise<void> => {
+const checkJWT = (token: string): Promise<string> => {
     if (!process.env.JWT_SECRET || !process.env.JWT_ISSUER || !process.env.JWT_AUD) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
@@ -24,11 +24,11 @@ const checkJWT = (token: string): Promise<void> => {
         jwt.verify(token, process.env.JWT_SECRET, {
             audience: process.env.JWT_AUD,
             issuer: process.env.JWT_ISSUER,
-        }, (err) => {
+        }, (err, decoded: JwtPayload) => {
             if (!!err) {
                 rej(err)
             } else {
-                res()
+                res(decoded.userId)
             }
         });
     })
@@ -37,7 +37,7 @@ const checkJWT = (token: string): Promise<void> => {
 }
 
 type AuthResponse = APIGatewayAuthorizerResult
-const generatePolicy = (principalId: string, effect: StatementEffect, resource: string): AuthResponse => {
+const generatePolicy = (principalId: string, effect: StatementEffect, resource: string, userId): AuthResponse => {
     const p: AuthResponse = {
         principalId,
         policyDocument: {
@@ -49,6 +49,9 @@ const generatePolicy = (principalId: string, effect: StatementEffect, resource: 
                     Resource: resource,
                 }
             ]
+        },
+        context: {
+            userId,
         }
     }
 

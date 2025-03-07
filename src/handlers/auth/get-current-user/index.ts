@@ -5,12 +5,12 @@ type AuthorizerResponse = {
 }
 
 export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerResponse> = async (ev) => {
-    const user = ev.requestContext.authorizer.lambda.userId;
+    const userId = ev.requestContext.authorizer.lambda.userId;
 
-    console.log(JSON.stringify(ev, undefined, 2))
-    console.log(user)
     return {
-        user,
+        body: JSON.stringify({
+            userId
+        }),
         statusCode: 200,
     }
 }

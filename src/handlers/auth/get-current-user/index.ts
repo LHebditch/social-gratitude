@@ -23,9 +23,12 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
         }
 
         console.info("attempting to find user")
-        const user = await getUser(userId)
+        const { displayName, email } = await getUser(userId)
         console.info("user found")
-        return APIResponse(200, user)
+        return APIResponse(200, {
+            displayName,
+            email,
+        })
     } catch (e: unknown) {
         return handleError(e, userId)
     }

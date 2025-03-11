@@ -72,9 +72,7 @@ const getUser = async (id: string): Promise<User> => {
             IndexName: 'gsi1',
             KeyConditionExpression: 'gsi1 = :id',
             ExpressionAttributeValues: {
-                ':id': {
-                    "S": id,
-                }
+                ':id': id
             }
 
         });

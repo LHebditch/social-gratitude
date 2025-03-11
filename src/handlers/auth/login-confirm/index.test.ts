@@ -13,7 +13,7 @@ import { KMSClient, DecryptCommand } from "@aws-sdk/client-kms";
 const dynamoMock = mockClient(DynamoDBDocumentClient)
 const kmsMock = mockClient(KMSClient)
 
-describe('test login', () => {
+describe('Login complete', () => {
     const OLD_ENV = process.env;
 
     beforeEach(() => {

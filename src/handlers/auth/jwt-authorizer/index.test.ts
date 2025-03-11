@@ -1,8 +1,4 @@
 
-
-import { mockClient } from 'aws-sdk-client-mock';
-import 'aws-sdk-client-mock-jest';
-
 import { handler } from ".";
 import type { APIGatewayProxyEventV2 as Event, APIGatewayProxyStructuredResultV2 as Result, Context, APIGatewayTokenAuthorizerEvent, APIGatewayAuthorizerResult } from "aws-lambda";
 
@@ -10,7 +6,7 @@ import jwt from 'jsonwebtoken';
 
 
 
-describe('test login', () => {
+describe('Authorizer', () => {
     const OLD_ENV = process.env;
 
     beforeEach(() => {

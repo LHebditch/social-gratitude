@@ -14,7 +14,7 @@ const sesMock = mockClient(SESClient)
 const dynamoMock = mockClient(DynamoDBDocumentClient)
 const kmsMock = mockClient(KMSClient)
 
-describe('test login', () => {
+describe('Login', () => {
     const OLD_ENV = process.env;
 
     beforeEach(() => {

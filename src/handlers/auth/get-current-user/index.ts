@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandlerV2WithLambdaAuthorizer } from "aws-lambda";
 
 import { BadRequestError, DynamoGetError, MisconfiguredServiceError, NotFoundError } from "../../../lib/exceptions";
-import type { User } from "../../../lib/models/user";
+import type { AuthorizerResponse, User } from "../../../lib/models/user";
 
 // aws
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
@@ -9,10 +9,6 @@ import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIResponse } from "../../../lib/response";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
-
-export type AuthorizerResponse = {
-    userId: string
-}
 
 export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerResponse> = async (ev) => {
     const userId = ev.requestContext.authorizer.lambda.userId;

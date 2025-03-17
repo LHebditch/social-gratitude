@@ -21,7 +21,7 @@ export class CdkStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
 
-    const { authorizer } = auth.build(this);
-    gratitude.build(this, authorizer);
+    const { authorizerFn } = auth.build(this);
+    gratitude.build(this, authorizerFn);
   }
 }

@@ -24,3 +24,7 @@ export type AuthToken = {
   _ttl: number;
   userId: string;
 }
+
+export type AuthorizerResponse = {
+  userId: string
+}

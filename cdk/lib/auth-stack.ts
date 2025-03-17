@@ -13,7 +13,6 @@ import {
 } from "aws-cdk-lib"
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { addLogGroup } from "./shared";
-import { MappingValue, ParameterMapping } from "aws-cdk-lib/aws-apigatewayv2";
 
 const { HttpLambdaIntegration } = aws_apigatewayv2_integrations;
 const { HttpLambdaResponseType } = apiauth;
@@ -211,7 +210,7 @@ export const build = (scope: Stack) => {
     });
 
     return {
-        authorizer,
+        authorizerFn,
     }
 };
 

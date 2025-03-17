@@ -5,10 +5,14 @@ import {
     aws_dynamodb as db,
     aws_lambda_nodejs as lambda,
     aws_apigatewayv2 as apigwv2,
-    aws_apigatewayv2_integrations,
+    aws_apigatewayv2_authorizers as apiauth,
 } from "aws-cdk-lib";
+import { addLogGroup } from "./shared";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import { HttpLambdaResponseType } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 
-export const build = (scope: Stack, authorizer: apigwv2.IHttpRouteAuthorizer) => {
+export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     const stack = new NestedStack(scope, "gratitude-stack");
     const suffix = stack.node.addr;
 
@@ -36,6 +40,25 @@ export const build = (scope: Stack, authorizer: apigwv2.IHttpRouteAuthorizer) =>
         },
     });
 
+    const saveEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-save-entries-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-save-entries`,
+        entry: '../src/handlers/gratitude/submit-entries/index.ts',
+        environment: {
+            AUTH_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-save-entries-function", saveEntriesFn);
+    table.grantReadWriteData(saveEntriesFn);
+
+    // AUTH
+    const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {
+        responseTypes: [HttpLambdaResponseType.IAM],
+    });
+
     // API //
     const corsOptions = {
         allowMethods: [
@@ -47,8 +70,16 @@ export const build = (scope: Stack, authorizer: apigwv2.IHttpRouteAuthorizer) =>
         allowOrigins: ['*'],
         maxAge: Duration.days(10),
     };
+
     const gratitudeApi = new apigwv2.HttpApi(stack, "gratitude-api", {
         corsPreflight: corsOptions,
+    });
+
+    gratitudeApi.addRoutes({
+        path: '/journal/entries',
+        methods: [apigwv2.HttpMethod.POST],
+        integration: new HttpLambdaIntegration("gratitude-save-entries", saveEntriesFn),
+        authorizer,
     });
 
     new apigwv2.HttpStage(stack, 'gratitude-api-v1-stage', {

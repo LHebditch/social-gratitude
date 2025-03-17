@@ -86,7 +86,7 @@ const saveEntries = async (entries: Entries, userId: string): Promise<string> =>
     return id
 }
 
-const createEntry = async (id: string, entry: string, index: number, userId: string) => {
+const createEntry = (id: string, entry: string, index: number, userId: string) => {
     return {
         PutRequest: {
             Item: {

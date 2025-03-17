@@ -102,11 +102,9 @@ const createEntry = async (id: string, entry: string, index: number, userId: str
 }
 
 const formattedDate = () => {
-    const { getDate, getMonth, getFullYear } = new Date()
-
-    const day = getDate()
-    const month = getMonth()
-    const year = getFullYear()
+    const day = new Date().getDate()
+    const month = new Date().getMonth()
+    const year = new Date().getFullYear()
 
     return `${year}-${month < 10 ? '0' : ''}${month}-${day < 10 ? '0' : ''}${day}`
 }

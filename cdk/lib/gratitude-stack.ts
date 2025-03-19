@@ -46,13 +46,27 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         functionName: `gratitude-save-entries`,
         entry: '../src/handlers/gratitude/submit-entries/index.ts',
         environment: {
-            AUTH_TABLE_NAME: table.tableName,
+            GRATITUDE_TABLE_NAME: table.tableName,
         },
         timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-save-entries-function", saveEntriesFn);
     table.grantReadWriteData(saveEntriesFn);
+
+    const getTodaysEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-get-entries-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-get-entries`,
+        entry: '../src/handlers/gratitude/get-entries/today/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-get-entries-function", getTodaysEntriesFn);
+    table.grantReadData(getTodaysEntriesFn);
 
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {
@@ -79,6 +93,13 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         path: '/journal/entries',
         methods: [apigwv2.HttpMethod.POST],
         integration: new HttpLambdaIntegration("gratitude-save-entries", saveEntriesFn),
+        authorizer,
+    });
+
+    gratitudeApi.addRoutes({
+        path: '/journal/today',
+        methods: [apigwv2.HttpMethod.GET],
+        integration: new HttpLambdaIntegration("gratitude-save-entries", getTodaysEntriesFn),
         authorizer,
     });
 

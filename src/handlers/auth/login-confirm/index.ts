@@ -59,7 +59,7 @@ const handleError = (e: unknown) => {
 }
 
 const generateJWT = (userId: string): string => {
-    console.warn('generating jwt')
+    console.log('generating jwt')
     if (!process.env.JWT_SECRET || !process.env.JWT_ISSUER || !process.env.JWT_AUD) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
@@ -67,7 +67,7 @@ const generateJWT = (userId: string): string => {
 }
 
 const incrementsAttempts = async (authToken: AuthToken, incr: number) => {
-    console.warn('incrementing attempts')
+    console.log('incrementing attempts')
     if (!process.env.AUTH_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }

@@ -8,6 +8,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { APIResponse } from "../../../lib/response";
 import { v4 as uuidv4 } from "uuid";
+import { formattedDate } from "../utils";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
 
@@ -59,7 +60,7 @@ const handleError = (e: unknown, userId: string) => {
 }
 
 const saveEntries = async (entries: Entries, userId: string): Promise<string> => {
-    if (!process.env.AUTH_TABLE_NAME) {
+    if (!process.env.GRATITUDE_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
 
@@ -68,7 +69,7 @@ const saveEntries = async (entries: Entries, userId: string): Promise<string> =>
     try {
         const putCommand = new BatchWriteCommand({
             RequestItems: {
-                [process.env.AUTH_TABLE_NAME]: [
+                [process.env.GRATITUDE_TABLE_NAME]: [
                     createEntry(id, entries.entry1, 0, userId),
                     createEntry(id, entries.entry2, 1, userId),
                     createEntry(id, entries.entry3, 2, userId),
@@ -101,10 +102,3 @@ const createEntry = (id: string, entry: string, index: number, userId: string) =
     }
 }
 
-const formattedDate = () => {
-    const day = new Date().getDate()
-    const month = new Date().getMonth()
-    const year = new Date().getFullYear()
-
-    return `${year}-${month < 10 ? '0' : ''}${month}-${day < 10 ? '0' : ''}${day}`
-}

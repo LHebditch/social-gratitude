@@ -5,6 +5,7 @@ import { MisconfiguredServiceError } from "../../../lib/exceptions";
 
 export const handler: APIGatewayAuthorizerHandler = async (event: APIGatewayTokenAuthorizerEvent) => {
     console.info("Start JWT verification")
+
     try {
         console.info("Attempting to verify JWT")
         const userId = await checkJWT(event.authorizationToken);
@@ -54,8 +55,6 @@ const generatePolicy = (principalId: string, effect: StatementEffect, resource: 
             userId,
         }
     }
-
-    console.debug(JSON.stringify(p, undefined, 2))
 
     return p;
 }

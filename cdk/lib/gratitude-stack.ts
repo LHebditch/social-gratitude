@@ -71,6 +71,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {
         responseTypes: [HttpLambdaResponseType.IAM],
+        identitySource: ['$request.header.Authorization', '$context.httpMethod', '$context.resourcePath']
     });
 
     // API //

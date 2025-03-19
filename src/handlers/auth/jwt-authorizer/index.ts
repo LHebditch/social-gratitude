@@ -55,6 +55,8 @@ const generatePolicy = (principalId: string, effect: StatementEffect, resource: 
         }
     }
 
+    console.debug(JSON.stringify(p, undefined, 2))
+
     return p;
 }
 

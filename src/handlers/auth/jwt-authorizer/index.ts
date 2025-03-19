@@ -5,7 +5,6 @@ import { MisconfiguredServiceError } from "../../../lib/exceptions";
 
 export const handler: APIGatewayAuthorizerHandler = async (event: APIGatewayTokenAuthorizerEvent) => {
     console.info("Start JWT verification")
-    console.debug(JSON.stringify(event, undefined, 2))
 
     try {
         console.info("Attempting to verify JWT")
@@ -18,10 +17,12 @@ export const handler: APIGatewayAuthorizerHandler = async (event: APIGatewayToke
     }
 }
 
-const checkJWT = (token: string): Promise<string> => {
+const checkJWT = (tokenHeader: string): Promise<string> => {
     if (!process.env.JWT_SECRET || !process.env.JWT_ISSUER || !process.env.JWT_AUD) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
+
+    const [token] = tokenHeader.split(',')
     return new Promise((res, rej) => {
         jwt.verify(token, process.env.JWT_SECRET, {
             audience: process.env.JWT_AUD,

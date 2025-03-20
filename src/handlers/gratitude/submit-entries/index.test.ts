@@ -41,7 +41,7 @@ describe('Submit entries', () => {
         } as Event<AuthorizerResponse>;
         const res = await handler(input, {} as Context, jest.fn())
 
-        expect((res as Result).statusCode).toBe(200)
+        expect((res as Result).statusCode).toBe(201)
     })
 
 })

@@ -28,7 +28,7 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
         }
         const entries: Entries = JSON.parse(ev.body ?? '{}')
         const id = await saveEntries(entries, userId)
-        return APIResponse(200, { id })
+        return APIResponse(201, { id })
     } catch (e: unknown) {
         return handleError(e, userId)
     }

@@ -1,6 +1,6 @@
 import { APIGatewayAuthorizerHandler, APIGatewayAuthorizerResult, APIGatewayTokenAuthorizerEvent, StatementEffect } from "aws-lambda";
 import jwt, { JwtPayload } from "jsonwebtoken"
-import { MisconfiguredServiceError } from "../../../lib/exceptions";
+import { BadRequestError, MisconfiguredServiceError } from "../../../lib/exceptions";
 
 
 export const handler: APIGatewayAuthorizerHandler = async (event: APIGatewayTokenAuthorizerEvent) => {
@@ -21,8 +21,15 @@ const checkJWT = (tokenHeader: string): Promise<string> => {
     if (!process.env.JWT_SECRET || !process.env.JWT_ISSUER || !process.env.JWT_AUD) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
+
     console.debug(tokenHeader)
-    const [token] = tokenHeader.split(',')
+    const [token] = tokenHeader
+        .split(',')
+        .filter(s => s.match(/^[\w-]*\.[\w-]*\.[\w-]*$/))
+
+    if (!token) {
+        throw new BadRequestError("No valid auth token found")
+    }
     return new Promise((res, rej) => {
         jwt.verify(token, process.env.JWT_SECRET, {
             audience: process.env.JWT_AUD,

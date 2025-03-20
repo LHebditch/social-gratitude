@@ -6,6 +6,7 @@ import {
     aws_lambda_nodejs as lambda,
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_authorizers as apiauth,
+    aws_sqs as sqs,
 } from "aws-cdk-lib";
 import { addLogGroup } from "./shared";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
@@ -40,6 +41,11 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         },
     });
 
+    // SQS//
+    const journalQueue = new sqs.Queue(stack, "gratitude-journal-queue", {
+        queueName: "gratitude-journal-entries",
+    })
+
     const saveEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-save-entries-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
@@ -67,6 +73,22 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     addLogGroup(stack, "gratitude-get-entries-function", getTodaysEntriesFn);
     table.grantReadData(getTodaysEntriesFn);
+
+    const shareTodaysEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-share-entries-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-share-entries`,
+        entry: '../src/handlers/gratitude/share-entries/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+            GRATITUDE_QUEUE_URL: journalQueue.queueUrl,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-share-entries-function", shareTodaysEntriesFn);
+    table.grantReadData(shareTodaysEntriesFn);
+    journalQueue.grantSendMessages(shareTodaysEntriesFn)
 
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {
@@ -98,11 +120,19 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     });
 
     gratitudeApi.addRoutes({
+        path: '/journal/entries/share',
+        methods: [apigwv2.HttpMethod.POST],
+        integration: new HttpLambdaIntegration("gratitude-share-entries", shareTodaysEntriesFn),
+        authorizer,
+    });
+
+    gratitudeApi.addRoutes({
         path: '/journal/today',
         methods: [apigwv2.HttpMethod.GET],
         integration: new HttpLambdaIntegration("gratitude-save-entries", getTodaysEntriesFn),
         authorizer,
     });
+
 
     new apigwv2.HttpStage(stack, 'gratitude-api-v1-stage', {
         httpApi: gratitudeApi,

@@ -1,16 +1,18 @@
 import { APIGatewayProxyHandlerV2WithLambdaAuthorizer } from "aws-lambda";
 
-import { BadRequestError, DynamoGetError, DynamoPutError, MisconfiguredServiceError, NotFoundError } from "../../../../lib/exceptions";
-import type { AuthorizerResponse } from "../../../../lib/models/user";
+import { BadRequestError, DynamoGetError, MisconfiguredServiceError } from "../../../lib/exceptions";
+import type { AuthorizerResponse } from "../../../lib/models/user";
 
 // aws
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { APIResponse } from "../../../../lib/response";
-import { formattedDate } from "../../utils";
-import { Entries, Entry } from "../../../../lib/models/journal";
+import { SQSClient, SendMessageCommand, SendMessageRequest } from "@aws-sdk/client-sqs";
+import { APIResponse } from "../../../lib/response";
+import { formattedDate } from "../utils";
+import { Entry } from "../../../lib/models/journal";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
+const sqs = new SQSClient();
 
 export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerResponse> = async (ev) => {
     const userId = ev.requestContext.authorizer.lambda.userId;
@@ -20,22 +22,44 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
             throw new BadRequestError("no user id supplied")
         }
         const entries = await getEntries(userId)
+        await sendEntriesToQueue(entries, userId);
+        // how do we want to share???
         return APIResponse(200, entries)
     } catch (e: unknown) {
         return handleError(e, userId)
     }
 }
 
-const getEntries = async (userId: string): Promise<Entries> => {
-    if (!process.env.GRATITUDE_TABLE_NAME) {
+const sendEntriesToQueue = async (entries: Entry[], userId: string) => {
+    if (!process.env.GRATITUDE_QUEUE_URL) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
 
-    const res: Entries = {
-        entry1: '',
-        entry2: '',
-        entry3: ''
-    };
+    const requests = []
+    for (let entry of entries) {
+        const input: SendMessageRequest = {
+            QueueUrl: process.env.GRATITUDE_QUEUE_URL,
+            MessageBody: JSON.stringify({
+                ...entry,
+                userId,
+            }),
+        }
+        requests.push(sqs.send(new SendMessageCommand(input)))
+    }
+
+    const results = await Promise.allSettled(requests)
+    const errors = results.filter(r => r.status === "rejected")
+    if (errors.length > 0) {
+        console.error(`failed to send ${errors.length} out of ${requests.length} entries to queue`, errors)
+        console.info("continuing despite sqs failures")
+    }
+
+}
+
+const getEntries = async (userId: string): Promise<Entry[]> => {
+    if (!process.env.GRATITUDE_TABLE_NAME) {
+        throw new MisconfiguredServiceError("Missing dynamodb environment variables");
+    }
 
     try {
         const getCommand = new QueryCommand({
@@ -50,15 +74,10 @@ const getEntries = async (userId: string): Promise<Entries> => {
         const { Items } = await dynamo.send(getCommand);
 
         if (!Items || !Items.length) {
-            return res
+            return []
         }
 
-        for (let i of Items as Entry[]) {
-            const entryId = ['entry1', 'entry2', 'entry3']
-            res[entryId[i.index]] = i.entry
-            res.id = i.id // they should all be the same...so
-        }
-        return res
+        return Items as Entry[]
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new DynamoGetError(e.message)

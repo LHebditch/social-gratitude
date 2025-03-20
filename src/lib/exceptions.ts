@@ -45,3 +45,9 @@ export class SendEmailError extends Error {
     super(message);
   }
 }
+
+export class SQSError extends Error {
+  constructor(message?: string) {
+    super(message);
+  }
+}

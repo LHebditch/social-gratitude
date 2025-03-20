@@ -24,7 +24,7 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
         const entries = await getEntries(userId)
         await sendEntriesToQueue(entries, userId);
         // how do we want to share???
-        return APIResponse(200, entries)
+        return APIResponse(200)
     } catch (e: unknown) {
         return handleError(e, userId)
     }
@@ -41,7 +41,6 @@ const sendEntriesToQueue = async (entries: Entry[], userId: string) => {
             QueueUrl: process.env.GRATITUDE_QUEUE_URL,
             MessageBody: JSON.stringify({
                 ...entry,
-                userId,
             }),
         }
         requests.push(sqs.send(new SendMessageCommand(input)))

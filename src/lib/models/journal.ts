@@ -10,4 +10,6 @@ export type Entry = {
     entry: string
     index: number
     gsi1: string
+    _sk: string
+    _pk: string
 }

@@ -21,7 +21,7 @@ const checkJWT = (tokenHeader: string): Promise<string> => {
     if (!process.env.JWT_SECRET || !process.env.JWT_ISSUER || !process.env.JWT_AUD) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
-
+    console.debug(tokenHeader)
     const [token] = tokenHeader.split(',')
     return new Promise((res, rej) => {
         jwt.verify(token, process.env.JWT_SECRET, {

@@ -44,7 +44,7 @@ const handleError = (e: unknown) => {
     }
 }
 
-const assesInput = (input: string): Sentiment.AnalysisResult => {
+export const assesInput = (input: string): Sentiment.AnalysisResult => {
     var s = new Sentiment();
     // todo - consider this...how can we tell what language they are using?
     // todo - register other languages?

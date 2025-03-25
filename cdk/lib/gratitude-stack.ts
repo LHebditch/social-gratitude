@@ -111,7 +111,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     });
 
     addLogGroup(stack, "gratitude-analyse-submissions-function", analyseSubmissionsFn);
-    table.grantReadData(analyseSubmissionsFn);
+    table.grantWriteData(analyseSubmissionsFn);
     journalQueue.grantConsumeMessages(analyseSubmissionsFn)
     analyseSubmissionsFn.addEventSource(new eventSource.SqsEventSource(journalQueue))
 

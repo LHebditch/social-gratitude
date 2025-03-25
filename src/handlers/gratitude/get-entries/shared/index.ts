@@ -1,6 +1,6 @@
-import { APIGatewayProxyHandlerV2WithLambdaAuthorizer } from "aws-lambda";
+import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 
-import { BadRequestError, DynamoGetError, MisconfiguredServiceError } from "../../../../lib/exceptions";
+import { BadRequestError, DynamoGetError, MisconfiguredServiceError, } from "../../../../lib/exceptions";
 import type { AuthorizerResponse } from "../../../../lib/models/user";
 
 // aws
@@ -8,57 +8,51 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIResponse } from "../../../../lib/response";
 import { formattedDate } from "../../utils";
-import { Entries, Entry } from "../../../../lib/models/journal";
+import { Entry } from "../../../../lib/models/journal";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
 
-export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerResponse> = async (ev) => {
-    const userId = ev.requestContext.authorizer.lambda.userId;
+export type EntryView = {
+    entry: string
+    userId: string
+    id: string
+    index: string
+    likes: number
+}
+
+export const handler: APIGatewayProxyHandlerV2 = async () => {
 
     try {
-        if (!userId) {
-            throw new BadRequestError("no user id supplied")
-        }
-        const entries = await getEntries(userId)
+        const entries = await getEntries()
         return APIResponse(200, entries)
     } catch (e: unknown) {
-        return handleError(e, userId)
+        return handleError(e)
     }
 }
 
-const getEntries = async (userId: string): Promise<Entries> => {
+const getEntries = async (): Promise<EntryView[]> => {
     if (!process.env.GRATITUDE_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
 
-    const res: Entries = {
-        entry1: '',
-        entry2: '',
-        entry3: ''
-    };
-
     try {
         const getCommand = new QueryCommand({
             TableName: process.env.GRATITUDE_TABLE_NAME,
-            IndexName: 'gsi1',
-            KeyConditionExpression: 'gsi1 = :id',
+            IndexName: 'gsi2',
+            KeyConditionExpression: 'gsi2 = :id',
             ExpressionAttributeValues: {
-                ':id': `${userId}/${formattedDate()}`
+                ':id': `social/${formattedDate()}`
             }
 
         });
         const { Items } = await dynamo.send(getCommand);
 
         if (!Items || !Items.length) {
-            return res
+            return []
         }
 
-        for (let i of Items as Entry[]) {
-            const entryId = ['entry1', 'entry2', 'entry3']
-            res[entryId[i.index]] = i.entry
-            res.id = i.id // they should all be the same...so
-        }
-        return res
+        return (Items as Entry[]).map(mapEntryToView)
+
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new DynamoGetError(e.message)
@@ -67,7 +61,20 @@ const getEntries = async (userId: string): Promise<Entries> => {
     }
 }
 
-const handleError = (e: unknown, userId: string) => {
+const mapEntryToView = ({ entry, _pk, _sk }: Entry): EntryView => {
+    const [a, id, b] = _pk.split('/')
+    const [userId, index] = _sk.split('/')
+
+    return {
+        entry,
+        id,
+        index,
+        userId,
+        likes: 0 // TODO --- this
+    }
+}
+
+const handleError = (e: unknown) => {
     if (e instanceof MisconfiguredServiceError) {
         console.warn("service is misconfigured")
         return APIResponse(500)
@@ -79,7 +86,7 @@ const handleError = (e: unknown, userId: string) => {
     }
 
     if (e instanceof BadRequestError) {
-        console.warn("invalid request", userId)
+        console.warn("invalid request")
         return APIResponse(400)
     }
 

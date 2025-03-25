@@ -41,6 +41,13 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
             type: db.AttributeType.STRING,
         },
     });
+    table.addGlobalSecondaryIndex({
+        indexName: "gsi2",
+        partitionKey: {
+            name: "gsi2",
+            type: db.AttributeType.STRING,
+        },
+    });
 
     // SQS//
     const journalQueue = new sqs.Queue(stack, "gratitude-journal-queue", {
@@ -115,6 +122,21 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     journalQueue.grantConsumeMessages(analyseSubmissionsFn)
     analyseSubmissionsFn.addEventSource(new eventSource.SqsEventSource(journalQueue))
 
+    // GET SOCIAL ENTRIES //
+    const getSocialEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-get-shared-entries-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-get-shared-entries`,
+        entry: '../src/handlers/gratitude/get-entries/shared/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-get-shared-entries-function", getSocialEntriesFn);
+    table.grantReadData(getSocialEntriesFn);
+
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {
         responseTypes: [HttpLambdaResponseType.IAM],
@@ -154,8 +176,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     gratitudeApi.addRoutes({
         path: '/journal/today',
         methods: [apigwv2.HttpMethod.GET],
-        integration: new HttpLambdaIntegration("gratitude-save-entries", getTodaysEntriesFn),
+        integration: new HttpLambdaIntegration("gratitude-todays-entries", getTodaysEntriesFn),
         authorizer,
+    });
+
+    gratitudeApi.addRoutes({
+        path: '/journal/social',
+        methods: [apigwv2.HttpMethod.GET],
+        integration: new HttpLambdaIntegration("gratitude-social-entries", getSocialEntriesFn),
     });
 
 

@@ -7,6 +7,7 @@ import {
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_authorizers as apiauth,
     aws_sqs as sqs,
+    aws_lambda_event_sources as eventSource
 } from "aws-cdk-lib";
 import { addLogGroup } from "./shared";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
@@ -46,6 +47,11 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         queueName: "gratitude-journal-entries",
     })
 
+    // ================ //
+    // LAMBDA FUNCTIONS //
+    // ================ //
+
+    // SAVE ENTRIES //
     const saveEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-save-entries-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
@@ -60,6 +66,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     addLogGroup(stack, "gratitude-save-entries-function", saveEntriesFn);
     table.grantReadWriteData(saveEntriesFn);
 
+    // GET TODAYS ENTRIES //
     const getTodaysEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-get-entries-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
@@ -74,6 +81,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     addLogGroup(stack, "gratitude-get-entries-function", getTodaysEntriesFn);
     table.grantReadData(getTodaysEntriesFn);
 
+    // SHARE ENTRIES //
     const shareTodaysEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-share-entries-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
@@ -89,6 +97,23 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     addLogGroup(stack, "gratitude-share-entries-function", shareTodaysEntriesFn);
     table.grantReadData(shareTodaysEntriesFn);
     journalQueue.grantSendMessages(shareTodaysEntriesFn)
+
+    // ANALYSE SUBMISSIONS //
+    const analyseSubmissionsFn = new lambda.NodejsFunction(stack, 'gratitude-analyse-submissions-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-analyse-submissions`,
+        entry: '../src/handlers/gratitude/analyse-submissions/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-analyse-submissions-function", analyseSubmissionsFn);
+    table.grantReadData(analyseSubmissionsFn);
+    journalQueue.grantConsumeMessages(analyseSubmissionsFn)
+    analyseSubmissionsFn.addEventSource(new eventSource.SqsEventSource(journalQueue))
 
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {

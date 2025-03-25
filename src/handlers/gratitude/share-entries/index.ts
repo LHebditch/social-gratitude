@@ -22,7 +22,7 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
             throw new BadRequestError("no user id supplied")
         }
         const entries = await getEntries(userId)
-        await sendEntriesToQueue(entries, userId);
+        await sendEntriesToQueue(entries);
         // how do we want to share???
         return APIResponse(200)
     } catch (e: unknown) {
@@ -30,9 +30,9 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
     }
 }
 
-const sendEntriesToQueue = async (entries: Entry[], userId: string) => {
+const sendEntriesToQueue = async (entries: Entry[]) => {
     if (!process.env.GRATITUDE_QUEUE_URL) {
-        throw new MisconfiguredServiceError("Missing dynamodb environment variables");
+        throw new MisconfiguredServiceError("Missing sqs environment variables");
     }
 
     const requests = []

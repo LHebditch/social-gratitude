@@ -41,7 +41,7 @@ const handleError = (e: unknown) => {
 
     if (e instanceof DynamoPutError) {
         console.error('failed to store reaction: ' + e.message)
-        return APIResponse(404);
+        return APIResponse(400);
     }
 
     console.error("An unknown error has occured");
@@ -68,7 +68,7 @@ const saveEntryReaction = async ({ creatorId, entryId, index }: EntryReactionBod
     }
 
     const cmd = new PutCommand({
-        TableName: process.env.AUTH_TABLE_NAME,
+        TableName: process.env.GRATITUDE_TABLE_NAME,
         Item: entry,
     })
     try {

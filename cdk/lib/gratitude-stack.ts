@@ -165,7 +165,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     });
 
     addLogGroup(stack, "gratitude-get-entry-reactions-function", getEntryReactionsFn);
-    table.grantWriteData(getEntryReactionsFn);
+    table.grantReadData(getEntryReactionsFn);
 
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {

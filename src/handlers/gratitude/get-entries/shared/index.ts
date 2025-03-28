@@ -1,7 +1,6 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 
 import { BadRequestError, DynamoGetError, MisconfiguredServiceError, } from "../../../../lib/exceptions";
-import type { AuthorizerResponse } from "../../../../lib/models/user";
 
 // aws
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";

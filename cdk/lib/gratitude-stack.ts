@@ -137,6 +137,36 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     addLogGroup(stack, "gratitude-get-shared-entries-function", getSocialEntriesFn);
     table.grantReadData(getSocialEntriesFn);
 
+    // REACT TO ENTRY //
+    const reactToEntryFn = new lambda.NodejsFunction(stack, 'gratitude-react-to-entry-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-react-to-entry`,
+        entry: '../src/handlers/gratitude/likes/react/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-react-to-entry-function", reactToEntryFn);
+    table.grantWriteData(reactToEntryFn);
+
+    // GET ENTRY REACTIONS //
+    const getEntryReactionsFn = new lambda.NodejsFunction(stack, 'gratitude-get-entry-reactions-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-get-entry-reactions`,
+        entry: '../src/handlers/gratitude/likes/get/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-get-entry-reactions-function", getEntryReactionsFn);
+    table.grantWriteData(getEntryReactionsFn);
+
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {
         responseTypes: [HttpLambdaResponseType.IAM],
@@ -174,6 +204,20 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     });
 
     gratitudeApi.addRoutes({
+        path: '/journal/reactions/react',
+        methods: [apigwv2.HttpMethod.POST],
+        integration: new HttpLambdaIntegration("gratitude-react-entries", reactToEntryFn),
+        authorizer,
+    });
+
+    gratitudeApi.addRoutes({
+        path: '/journal/reactions',
+        methods: [apigwv2.HttpMethod.POST],
+        integration: new HttpLambdaIntegration("gratitude-get-reactions", getEntryReactionsFn),
+        authorizer,
+    });
+
+    gratitudeApi.addRoutes({
         path: '/journal/today',
         methods: [apigwv2.HttpMethod.GET],
         integration: new HttpLambdaIntegration("gratitude-todays-entries", getTodaysEntriesFn),
@@ -185,6 +229,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         methods: [apigwv2.HttpMethod.GET],
         integration: new HttpLambdaIntegration("gratitude-social-entries", getSocialEntriesFn),
     });
+
 
 
     new apigwv2.HttpStage(stack, 'gratitude-api-v1-stage', {

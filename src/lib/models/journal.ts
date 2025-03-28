@@ -13,3 +13,13 @@ export type Entry = {
     _sk: string
     _pk: string
 }
+
+export type EntryLike = {
+    _pk: string
+    _sk: string
+    creatorId: string
+    id: string
+    index: number
+    likedById: string
+    value: number
+}

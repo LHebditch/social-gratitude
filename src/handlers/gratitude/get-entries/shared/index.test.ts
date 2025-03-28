@@ -2,9 +2,8 @@ import { mockClient } from 'aws-sdk-client-mock';
 import 'aws-sdk-client-mock-jest';
 import { EntryView, handler } from ".";
 
-import type { APIGatewayProxyEventV2WithLambdaAuthorizer as Event, APIGatewayProxyStructuredResultV2 as Result, Context } from "aws-lambda";
+import type { APIGatewayProxyStructuredResultV2 as Result, Context } from "aws-lambda";
 import { QueryCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { AuthorizerResponse } from '../../../../lib/models/user';
 
 const dynamoMock = mockClient(DynamoDBDocumentClient)
 

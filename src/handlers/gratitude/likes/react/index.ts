@@ -52,9 +52,16 @@ const handleError = (e: unknown) => {
 // entry _pk is journal/<creatorId>/entry
 // entry _sk is <entryid>/<index>
 // so we want to store
-const saveEntryReaction = async ({ creatorId, entryId, index }: EntryReactionBody, likedById: string) => {
+const saveEntryReaction = async (event: EntryReactionBody, likedById: string) => {
     if (!process.env.GRATITUDE_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
+    }
+
+    const { creatorId, entryId, index } = event
+
+    if (!index || !creatorId || !entryId) {
+        console.warn("invalid body", event)
+        throw new BadRequestError("body is invalid")
     }
 
     const entry: EntryLike = {

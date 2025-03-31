@@ -60,14 +60,13 @@ const getEntries = async (): Promise<EntryView[]> => {
     }
 }
 
-const mapEntryToView = ({ entry, _pk, _sk }: Entry): EntryView => {
-    const [a, id, b] = _pk.split('/')
-    const [userId, index] = _sk.split('/')
+const mapEntryToView = ({ entry, _pk, id, index }: Entry): EntryView => {
+    const [a, userId, b] = _pk.split('/')
 
     return {
         entry,
         id,
-        index,
+        index: `${index}`,
         userId,
         likes: 0 // TODO --- this
     }

@@ -19,7 +19,9 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
     try {
         const body: Body = JSON.parse(ev.body)
         const res = await getEntryReactions(body.entries, userId)
-        return APIResponse(200, res)
+        return APIResponse(200, {
+            liked: res.map(e => e._pk.replace('reaction/', ''))
+        })
     } catch (e: unknown) {
         return handleError(e)
     }

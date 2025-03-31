@@ -19,7 +19,7 @@ describe('Get entries for today', () => {
         dynamoMock.on(BatchGetCommand).resolves({
             Responses: {
                 gratitudeTable: [
-                    { a: 1, b: 2 }
+                    { _pk: 'reaction/1' }
                 ]
             }
         })
@@ -46,6 +46,7 @@ describe('Get entries for today', () => {
         } as Event<AuthorizerResponse>
         const res = await handler(ev, {} as Context, jest.fn()) as Result
         expect(res.statusCode).toBe(200)
+        expect(res.body).toBe(JSON.stringify({ liked: ['1'] }))
         expect(dynamoMock.calls().length).toBe(1)
 
     })

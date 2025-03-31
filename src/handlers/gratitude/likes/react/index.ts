@@ -59,7 +59,7 @@ const saveEntryReaction = async (event: EntryReactionBody, likedById: string) =>
 
     const { creatorId, entryId, index } = event
 
-    if (!index || !creatorId || !entryId) {
+    if (index === undefined || !creatorId || !entryId) {
         console.warn("invalid body", event)
         throw new BadRequestError("body is invalid")
     }

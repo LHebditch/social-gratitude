@@ -17,9 +17,12 @@ export type Entry = {
 export type EntryLike = {
     _pk: string
     _sk: string
+
     creatorId: string
     id: string
     index: number
     likedById: string
     value: number
+
+    _ttl?: number
 }

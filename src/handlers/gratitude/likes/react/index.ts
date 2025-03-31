@@ -71,7 +71,10 @@ const saveEntryReaction = async (event: EntryReactionBody, likedById: string) =>
         index,
         id: entryId,
         value: 1,
-        creatorId
+        creatorId,
+        // keep for 2 weeks?
+        // seeing as we only show recent posts
+        _ttl: Math.floor((new Date().getTime() + 14 * 24 * 60 * 60 * 1000) / 1000)
     }
 
     const cmd = new PutCommand({

@@ -20,7 +20,7 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
             throw new BadRequestError("no user id supplied")
         }
         const score = await getScore(userId)
-        return APIResponse(200, score)
+        return APIResponse(200, { score })
     } catch (e: unknown) {
         console.error(e)
         return APIResponse(200, 0)

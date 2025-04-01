@@ -1,5 +1,5 @@
 import { DynamoDBStreamHandler } from "aws-lambda";
-import { EntryLike } from "../../../../lib/models/journal";
+import { EntryLike, InfluenceScore } from "../../../../lib/models/journal";
 
 import { AttributeValue, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, BatchGetCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
@@ -10,12 +10,6 @@ const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
 
 type Score = {
     [key: string]: number
-}
-
-type InfluenceScore = {
-    _pk: string
-    _sk: string
-    score: number
 }
 
 export const handler: DynamoDBStreamHandler = async (ev) => {
@@ -103,7 +97,7 @@ const getFromDynamo = async (pks: string[]): Promise<InfluenceScore[]> => {
     })
 
     const res = await dynamo.send(cmd)
-    if (res.UnprocessedKeys != null && Object.keys(res.UnprocessedKeys).length == 0) {
+    if (res.UnprocessedKeys != null && Object.keys(res.UnprocessedKeys).length > 0) {
         console.error('not all entries were requested...', res)
         // handle retry...but UnprocessedKeys is being incredibly annoying
     }

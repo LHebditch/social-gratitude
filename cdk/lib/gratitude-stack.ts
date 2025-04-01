@@ -170,6 +170,20 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     addLogGroup(stack, "gratitude-get-entry-reactions-function", getEntryReactionsFn);
     table.grantReadData(getEntryReactionsFn);
 
+    const getInfluenceScoreFn = new lambda.NodejsFunction(stack, 'gratitude-get-influence-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-get-influence`,
+        entry: '../src/handlers/gratitude/influence/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-get-influence-function", getInfluenceScoreFn);
+    table.grantReadData(getInfluenceScoreFn);
+
 
     // EVENTS //
     // ON REACTION HANDLER
@@ -238,6 +252,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         authorizer,
     });
 
+    // POST a list of reaction ids and return the ones that the current user has liked
+    gratitudeApi.addRoutes({
+        path: '/journal/reactions',
+        methods: [apigwv2.HttpMethod.POST],
+        integration: new HttpLambdaIntegration("gratitude-get-reactions", getEntryReactionsFn),
+        authorizer,
+    });
+
     gratitudeApi.addRoutes({
         path: '/journal/reactions/react',
         methods: [apigwv2.HttpMethod.POST],
@@ -246,10 +268,9 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     });
 
     gratitudeApi.addRoutes({
-        path: '/journal/reactions',
-        methods: [apigwv2.HttpMethod.POST],
-        integration: new HttpLambdaIntegration("gratitude-get-reactions", getEntryReactionsFn),
-        authorizer,
+        path: '/journal/reactions/influence',
+        methods: [apigwv2.HttpMethod.GET],
+        integration: new HttpLambdaIntegration("gratitude-social-influence", getInfluenceScoreFn),
     });
 
     gratitudeApi.addRoutes({

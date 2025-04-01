@@ -27,3 +27,9 @@ export type EntryLike = {
     _ttl?: number
     gsi1?: string
 }
+
+export type InfluenceScore = {
+    _pk: string
+    _sk: string
+    score: number
+}

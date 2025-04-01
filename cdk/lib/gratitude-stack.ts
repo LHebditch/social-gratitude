@@ -185,7 +185,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     });
 
     addLogGroup(stack, "gratitude-on-reaction-reactions-function", onReactionFn);
-    table.grantReadData(onReactionFn);
+    table.grantReadWriteData(onReactionFn);
 
     onReactionFn.addEventSource(new DynamoEventSource(table, {
         startingPosition: fn.StartingPosition.LATEST,

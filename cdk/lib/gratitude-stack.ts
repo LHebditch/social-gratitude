@@ -271,6 +271,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         path: '/journal/reactions/influence',
         methods: [apigwv2.HttpMethod.GET],
         integration: new HttpLambdaIntegration("gratitude-social-influence", getInfluenceScoreFn),
+        authorizer,
     });
 
     gratitudeApi.addRoutes({

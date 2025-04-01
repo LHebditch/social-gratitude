@@ -190,9 +190,15 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     onReactionFn.addEventSource(new DynamoEventSource(table, {
         startingPosition: fn.StartingPosition.LATEST,
         filters: [
-            {
-                "Pattern": "{ \"dynamodb\": { \"OldImage\": { \"gsi1\": { \"S\": [ \"REACTION\" ] } } } }"
-            }
+            fn.FilterCriteria.filter({
+                dynamodb: {
+                    NewImage: {
+                        gsi1: {
+                            S: fn.FilterRule.isEqual('REACTION'),
+                        }
+                    }
+                }
+            }),
         ]
     }))
 

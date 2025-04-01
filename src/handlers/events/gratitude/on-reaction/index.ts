@@ -40,7 +40,7 @@ export const handler: DynamoDBStreamHandler = async (ev) => {
             .map(k => ({
                 _pk: k,
                 _sk: 'INFLUENCE_SCORE',
-                score: scores[k] ?? 0
+                score: 0,
             }))
 
         const influenceScores = [
@@ -73,10 +73,14 @@ const saveToDynamo = async (scores: InfluenceScore[]) => {
 
     const putCommand = new BatchWriteCommand({
         RequestItems: {
-            [process.env.GRATITUDE_TABLE_NAME]: scores
+            [process.env.GRATITUDE_TABLE_NAME]: scores.map(s => ({
+                PutRequest: {
+                    Item: s,
+                }
+            }))
         }
     })
-    const res = await dynamo.send(putCommand)
+    await dynamo.send(putCommand)
 }
 
 const getFromDynamo = async (pks: string[]): Promise<InfluenceScore[]> => {
@@ -100,7 +104,7 @@ const getFromDynamo = async (pks: string[]): Promise<InfluenceScore[]> => {
     })
 
     const res = await dynamo.send(cmd)
-    if (res.UnprocessedKeys != null) {
+    if (res.UnprocessedKeys != null && Object.keys(res.UnprocessedKeys).length == 0) {
         console.error('not all entries were requested...', res)
         // handle retry...but UnprocessedKeys is being incredibly annoying
     }

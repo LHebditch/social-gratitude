@@ -4,6 +4,7 @@ import {
     Stack,
     aws_dynamodb as db,
     aws_lambda_nodejs as lambda,
+    aws_lambda as fn,
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_authorizers as apiauth,
     aws_sqs as sqs,
@@ -13,6 +14,7 @@ import { addLogGroup } from "./shared";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { HttpLambdaResponseType } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
+import { DynamoEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     const stack = new NestedStack(scope, "gratitude-stack");
@@ -32,6 +34,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         },
         billingMode: db.BillingMode.PAY_PER_REQUEST,
         timeToLiveAttribute: '_ttl',
+        stream: db.StreamViewType.NEW_IMAGE,
     };
     const table = new db.Table(stack, tableName, props);
     table.addGlobalSecondaryIndex({
@@ -166,6 +169,32 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     addLogGroup(stack, "gratitude-get-entry-reactions-function", getEntryReactionsFn);
     table.grantReadData(getEntryReactionsFn);
+
+
+    // EVENTS //
+    // ON REACTION HANDLER
+    const onReactionFn = new lambda.NodejsFunction(stack, 'gratitude-on-reaction-reactions-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-on-reaction-reactions`,
+        entry: '../src/handlers/events/gratitude/on-reaction/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-on-reaction-reactions-function", onReactionFn);
+    table.grantReadData(onReactionFn);
+
+    onReactionFn.addEventSource(new DynamoEventSource(table, {
+        startingPosition: fn.StartingPosition.LATEST,
+        filters: [
+            {
+                "Pattern": "{ \"dynamodb\": { \"OldImage\": { \"gsi1\": { \"S\": [ \"REACTION\" ] } } } }"
+            }
+        ]
+    }))
 
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {

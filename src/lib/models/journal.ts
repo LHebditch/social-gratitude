@@ -25,4 +25,5 @@ export type EntryLike = {
     value: number
 
     _ttl?: number
+    gsi1?: string
 }

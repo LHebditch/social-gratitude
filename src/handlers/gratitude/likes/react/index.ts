@@ -74,7 +74,8 @@ const saveEntryReaction = async (event: EntryReactionBody, likedById: string) =>
         creatorId,
         // keep for 2 weeks?
         // seeing as we only show recent posts
-        _ttl: Math.floor((new Date().getTime() + 14 * 24 * 60 * 60 * 1000) / 1000)
+        _ttl: Math.floor((new Date().getTime() + 14 * 24 * 60 * 60 * 1000) / 1000),
+        gsi1: 'REACTION'
     }
 
     const cmd = new PutCommand({

@@ -64,6 +64,7 @@ export const handler: DynamoDBStreamHandler = async (ev) => {
 }
 
 const saveToDynamo = async (scores: InfluenceScore[]) => {
+    console.debug('attemp to save changes in dynamo', scores)
     if (!process.env.GRATITUDE_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
@@ -89,7 +90,7 @@ const getFromDynamo = async (pks: string[]): Promise<InfluenceScore[]> => {
         _pk: pk,
         _sk: 'INFLUENCE_SCORE',
     }))
-
+    console.debug('requesting:', keys)
     const cmd = new BatchGetCommand({
         RequestItems: {
             [process.env.GRATITUDE_TABLE_NAME]: {
@@ -103,5 +104,6 @@ const getFromDynamo = async (pks: string[]): Promise<InfluenceScore[]> => {
         console.error('not all entries were requested...', res)
         // handle retry...but UnprocessedKeys is being incredibly annoying
     }
+    console.debug('returning results from dynamo')
     return res.Responses[process.env.GRATITUDE_TABLE_NAME] as InfluenceScore[]
 }

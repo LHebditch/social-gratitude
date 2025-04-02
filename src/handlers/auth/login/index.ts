@@ -73,7 +73,7 @@ const sendTokenEmail = async (token: number, email: string) => {
                     Html: {
                         Data: `<html>
                         <body>
-                        <p>You're token is: ${token}.</p>
+                        <p>Your token is: ${token}.</p>
                         <p>This token will expire in 15 minutes.</p>
                         </body>
                         </html>`,

@@ -7,7 +7,7 @@ import {
     MisconfiguredServiceError,
 } from "../../../lib/exceptions";
 import { SignupPayload, User } from "../../../lib/models/user";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 const ddbClient = new DynamoDBClient();
@@ -34,6 +34,10 @@ const handleError = (e: unknown) => {
         return APIResponse(500);
     }
 
+    if (e instanceof ConditionalCheckFailedException) {
+        return APIResponse(409)
+    }
+
     console.error("An unknown error has occured");
     return APIResponse(500, "something aweful's happened...");
 }
@@ -51,6 +55,9 @@ const saveNewUser = async (user: User): Promise<void> => {
         })
         await ddbDocClient.send(cmd);
     } catch (e: unknown) {
+        if (e instanceof ConditionalCheckFailedException) {
+            throw e
+        }
         if (e instanceof Error) {
             throw new DynamoPutError(e.message);
         }

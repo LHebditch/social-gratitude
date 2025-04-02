@@ -66,6 +66,9 @@ const saveNewUser = async (user: User): Promise<void> => {
 };
 
 const buildDTO = (payload: SignupPayload): User => {
+    if (!payload.email.toLocaleLowerCase().match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        throw new BadRequestError('invalid email')
+    }
     const id = uuidv4()
     return {
         ...payload,

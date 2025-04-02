@@ -9,6 +9,7 @@ export type User = SignupPayload & {
   id: string;
   createdDate: string;
   gsi1: string;
+  verified?: boolean
 };
 
 export type LoginPayload = {

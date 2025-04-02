@@ -9,6 +9,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { KMSClient, EncryptCommand } from "@aws-sdk/client-kms";
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { getUser } from "../../../services/auth-service";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
 const kms = new KMSClient()
@@ -18,12 +19,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (ev) => {
     console.log('Initiating login')
     try {
         const { email } = parseBody(ev.body)
-        const { id } = await checkForUser(email)
+        const user = await getUser(email)
         // generate cryptographically safe OTP token
         console.log("generate token")
         const token = crypto.randomInt(100000, 999999);
         const encryptedToken = await encryptToken(token);
-        const tokenId = await saveToken(encryptedToken, email, id)
+        const tokenId = await saveToken(encryptedToken, email, user.id)
         await sendTokenEmail(token, email);
         console.log('succesfully sent token');
         return APIResponse(200, { tokenId });
@@ -111,34 +112,6 @@ const encryptToken = async (token: number): Promise<string> => {
     } catch (e: unknown) {
         if (e instanceof Error) {
             throw new KMSEncryptError(e.message)
-        }
-        throw e;
-    }
-}
-
-const checkForUser = async (email: string): Promise<User> => {
-    console.log("check user exists")
-    if (!process.env.AUTH_TABLE_NAME) {
-        throw new MisconfiguredServiceError("Missing dynamodb environment variables");
-    }
-
-    try {
-        const getCommand = new GetCommand({
-            TableName: process.env.AUTH_TABLE_NAME,
-            Key: {
-                _pk: `user/${email}`,
-                _sk: 'USER'
-            }
-        });
-        const { Item } = await dynamo.send(getCommand);
-
-        if (!Item) {
-            throw new NotFoundError('no user found');
-        }
-        return Item as User
-    } catch (e: unknown) {
-        if (e instanceof Error) {
-            throw new DynamoGetError(e.message)
         }
         throw e;
     }

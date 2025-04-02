@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken"
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { KMSClient, DecryptCommand } from "@aws-sdk/client-kms";
+import { getUser, saveUser } from "../../../services/auth-service";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
 const kms = new KMSClient()
@@ -27,7 +28,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         const storedToken = await decryptToken(encryptedToken)
         if (token === storedToken) {
             console.log("token correctly submitted")
-            await incrementsAttempts(authToken, maxAttempts + 1)
+            const user = await getUser(email)
+            if (!user.verified) {
+                await saveUser({
+                    ...user,
+                    verified: true
+                })
+            }
+            await incrementsAttempts(authToken, maxAttempts + 1) // stops the token being used again!
             return APIResponse(200, { jwt: generateJWT(userId) })
         }
 

@@ -18,6 +18,9 @@ export const handler: APIGatewayProxyHandlerV2WithLambdaAuthorizer<AuthorizerRes
     const userId = ev.requestContext.authorizer.lambda.userId;
     try {
         const body: Body = JSON.parse(ev.body)
+        if (!body.entries.length) {
+            return APIResponse(200, [])
+        }
         const res = await getEntryReactions(body.entries, userId)
         return APIResponse(200, {
             liked: res.map(e => e._pk.replace('reaction/', ''))
@@ -38,7 +41,7 @@ const handleError = (e: unknown) => {
     }
 
     if (e instanceof DynamoGetError) {
-        console.error('failed to store reaction: ' + e.message)
+        console.error('failed to get reactions: ' + e.message)
         return APIResponse(404);
     }
 

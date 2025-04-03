@@ -89,7 +89,7 @@ export const build = (scope: Stack) => {
             AUTH_TABLE_NAME: table.tableName,
             TOKEN_TTL_MINUTES: '15',
             AUTH_KMS_KEY_ID: authKMSKey.keyId,
-            SOURCE_EMAIL: 'noreply@l-h-solutions.awsapps.com'
+            SOURCE_EMAIL: 'noreply@gratilog.co.uk'
         },
         timeout: Duration.millis(3000),
     });

@@ -50,7 +50,7 @@ const getEntries = async (): Promise<EntryView[]> => {
             return []
         }
 
-        return (Items as Entry[]).map(mapEntryToView)
+        return (Items as Entry[]).map(mapEntryToView).filter(e => e.entry.trim() !== '')
 
     } catch (e: unknown) {
         if (e instanceof Error) {

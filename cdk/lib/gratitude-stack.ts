@@ -216,6 +216,39 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         ]
     }))
 
+    // ON SUBMIT HANDLER
+    const onSubmitFn = new lambda.NodejsFunction(stack, 'gratitude-on-submit-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-on-submit`,
+        entry: '../src/handlers/events/gratitude/on-submit/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-on-submit-function", onSubmitFn);
+    table.grantReadWriteData(onSubmitFn);
+
+    onSubmitFn.addEventSource(new DynamoEventSource(table, {
+        startingPosition: fn.StartingPosition.LATEST,
+        filters: [
+            fn.FilterCriteria.filter({
+                dynamodb: {
+                    NewImage: {
+                        _pk: {
+                            S: fn.FilterRule.beginsWith('journal/')
+                        },
+                        index: {
+                            N: fn.FilterRule.exists()
+                        }
+                    }
+                }
+            }),
+        ]
+    }))
+
     // AUTH
     const authorizer = new apiauth.HttpLambdaAuthorizer("gratitude-jwt-authorizer", authorizerFn, {
         responseTypes: [HttpLambdaResponseType.IAM],

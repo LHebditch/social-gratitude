@@ -33,3 +33,14 @@ export type InfluenceScore = {
     _sk: string
     score: number
 }
+
+export type Streak = {
+    _pk: string // userid
+    _sk: string // STREAK
+
+    streakStartDate: string
+    streakEndDate: string
+
+    maxStreak: number
+    currentStreak: number
+}

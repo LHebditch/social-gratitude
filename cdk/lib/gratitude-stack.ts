@@ -170,6 +170,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     addLogGroup(stack, "gratitude-get-entry-reactions-function", getEntryReactionsFn);
     table.grantReadData(getEntryReactionsFn);
 
+    // GET INFLUENCE SCORE //
     const getInfluenceScoreFn = new lambda.NodejsFunction(stack, 'gratitude-get-influence-function', {
         runtime: Runtime.NODEJS_22_X,
         handler: "index.handler",
@@ -184,6 +185,20 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     addLogGroup(stack, "gratitude-get-influence-function", getInfluenceScoreFn);
     table.grantReadData(getInfluenceScoreFn);
 
+    // GET STREAK //
+    const getStreakFn = new lambda.NodejsFunction(stack, 'gratitude-get-streak-function', {
+        runtime: Runtime.NODEJS_22_X,
+        handler: "index.handler",
+        functionName: `gratitude-get-streak`,
+        entry: '../src/handlers/gratitude/streak/index.ts',
+        environment: {
+            GRATITUDE_TABLE_NAME: table.tableName,
+        },
+        timeout: Duration.millis(3000),
+    });
+
+    addLogGroup(stack, "gratitude-get-streak-function", getStreakFn);
+    table.grantReadData(getStreakFn);
 
     // EVENTS //
     // ON REACTION HANDLER
@@ -320,7 +335,12 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         integration: new HttpLambdaIntegration("gratitude-social-entries", getSocialEntriesFn),
     });
 
-
+    gratitudeApi.addRoutes({
+        path: '/journal/streak',
+        methods: [apigwv2.HttpMethod.GET],
+        integration: new HttpLambdaIntegration("gratitude-get-streak", getStreakFn),
+        authorizer,
+    });
 
     new apigwv2.HttpStage(stack, 'gratitude-api-v1-stage', {
         httpApi: gratitudeApi,

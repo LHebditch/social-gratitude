@@ -1,5 +1,5 @@
 import { DynamoDBStreamHandler } from "aws-lambda";
-import { Entry } from "../../../../lib/models/journal";
+import { Entry, Streak } from "../../../../lib/models/journal";
 
 import { AttributeValue, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { BatchGetCommand, BatchWriteCommand, DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
@@ -33,17 +33,6 @@ export const handler: DynamoDBStreamHandler = async (ev) => {
         console.error('Something strange is afoot...', e)
     }
 
-}
-
-export type Streak = {
-    _pk: string // userid
-    _sk: string // STREAK
-
-    streakStartDate: string
-    streakEndDate: string
-
-    maxStreak: number
-    currentStreak: number
 }
 
 const updateStreaks = async (users: string[]): Promise<void> => {

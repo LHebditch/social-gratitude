@@ -11,6 +11,8 @@ import { Entry } from "../../../../lib/models/journal";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
 
+const DEFAULT_PAGE_SIZE = 25;
+
 export type EntryView = {
     entry: string
     userId: string
@@ -19,17 +21,23 @@ export type EntryView = {
     likes: number
 }
 
-export const handler: APIGatewayProxyHandlerV2 = async () => {
+export type PaginatedEntryResponse = {
+    entries: EntryView[]
+    nextToken?: string
+}
 
+export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     try {
-        const entries = await getEntries()
-        return APIResponse(200, entries)
+        // Get pagination token from query parameters
+        const nextToken = event.queryStringParameters?.nextToken;
+        const response = await getEntries(nextToken)
+        return APIResponse(200, response)
     } catch (e: unknown) {
         return handleError(e)
     }
 }
 
-const getEntries = async (): Promise<EntryView[]> => {
+const getEntries = async (nextToken?: string): Promise<PaginatedEntryResponse> => {
     if (!process.env.GRATITUDE_TABLE_NAME) {
         throw new MisconfiguredServiceError("Missing dynamodb environment variables");
     }
@@ -41,16 +49,30 @@ const getEntries = async (): Promise<EntryView[]> => {
             KeyConditionExpression: 'gsi2 = :id',
             ExpressionAttributeValues: {
                 ':id': `social/${formattedDate()}`
-            }
-
+            },
+            Limit: DEFAULT_PAGE_SIZE,
+            ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined
         });
-        const { Items } = await dynamo.send(getCommand);
+
+        const { Items, LastEvaluatedKey } = await dynamo.send(getCommand);
 
         if (!Items || !Items.length) {
-            return []
+            return { entries: [] }
         }
 
-        return (Items as Entry[]).map(mapEntryToView).filter(e => e.entry.trim() !== '')
+        const entries = (Items as Entry[])
+            .map(mapEntryToView)
+            .filter(e => e.entry.trim() !== '');
+
+        // Convert LastEvaluatedKey to base64 for the next token
+        const newNextToken = LastEvaluatedKey
+            ? Buffer.from(JSON.stringify(LastEvaluatedKey)).toString('base64')
+            : undefined;
+
+        return {
+            entries,
+            nextToken: newNextToken
+        }
 
     } catch (e: unknown) {
         if (e instanceof Error) {

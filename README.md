@@ -1,5 +1,78 @@
 # Social Gratitude
 
+## Architecture
+
+```mermaid
+graph TD
+    %% Client interactions
+    Client[Client Application]
+    
+    %% API Gateway and Authentication
+    APIG[API Gateway]
+    Auth[JWT Authorizer]
+    
+    %% Main Lambda Functions
+    GetEntries[Get Entries Lambda]
+    SubmitEntries[Submit Entries Lambda]
+    ShareEntries[Share Entries Lambda]
+    AnalyzeEntries[Analyze Entries Lambda]
+    ReactToEntry[React to Entry Lambda]
+    
+    %% Authentication Lambdas
+    Login[Login Lambda]
+    LoginConfirm[Login Confirm Lambda]
+    
+    %% Event Processing
+    OnSubmit[On Submit Lambda]
+    OnReaction[On Reaction Lambda]
+    
+    %% Storage and Queues
+    DDB[(DynamoDB)]
+    SQS[[Journal Queue]]
+    
+    %% Client to API Gateway
+    Client -->|HTTP Requests| APIG
+    APIG -->|Authorize| Auth
+    
+    %% API Routes
+    APIG -->|GET /journal/social| GetEntries
+    APIG -->|POST /journal/entries| SubmitEntries
+    APIG -->|POST /journal/entries/share| ShareEntries
+    APIG -->|POST /journal/reactions/react| ReactToEntry
+    APIG -->|POST /auth/login| Login
+    APIG -->|POST /auth/login/confirm| LoginConfirm
+    
+    %% Lambda to DynamoDB
+    GetEntries -->|Query GSI2| DDB
+    SubmitEntries -->|Write| DDB
+    ShareEntries -->|Read| DDB
+    ReactToEntry -->|Write| DDB
+    Login -->|Write Token| DDB
+    LoginConfirm -->|Verify Token| DDB
+    
+    %% Event Processing
+    ShareEntries -->|Send Entry| SQS
+    SQS -->|Trigger| AnalyzeEntries
+    AnalyzeEntries -->|Write Social Entry| DDB
+    
+    %% DynamoDB Streams
+    DDB -->|Stream New Entries| OnSubmit
+    DDB -->|Stream Reactions| OnReaction
+    OnSubmit -->|Update Streaks| DDB
+    OnReaction -->|Update Scores| DDB
+
+    %% Styling
+    classDef lambda fill:#ff9900,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef storage fill:#3b48cc,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef queue fill:#ff4f8b,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef gateway fill:#41c464,stroke:#fff,stroke-width:2px,color:#fff;
+    
+    class GetEntries,SubmitEntries,ShareEntries,AnalyzeEntries,ReactToEntry,Login,LoginConfirm,OnSubmit,OnReaction lambda;
+    class DDB storage;
+    class SQS queue;
+    class APIG,Auth gateway;
+```
+
 ## Prerequisites
 
 Before deploying anything you need to have set up an AWS account and inside that set up the OIDC role `GithubActionsAssumeRole` that grants:

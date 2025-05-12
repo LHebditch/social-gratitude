@@ -8,6 +8,7 @@ import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { APIResponse } from "../../../lib/response";
 import { BadRequestError, MisconfiguredServiceError } from "../../../lib/exceptions";
 import { Streak } from "../../../lib/models/journal";
+import { formattedDate } from "../utils";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
 
@@ -41,5 +42,14 @@ const getStreak = async (userid: string): Promise<number> => {
     })
     const { Item } = await dynamo.send(getCommand);
 
-    return (Item as Streak)?.currentStreak ?? 0
+    const today = formattedDate()
+    const yesterday = formattedDate(new Date(Date.now() - (24 * 60 * 60 * 1000)))
+
+    const streak = (Item as Streak);
+
+    if (streak?.streakEndDate === today || streak?.streakEndDate === yesterday) {
+        return streak?.currentStreak ?? 0
+    }
+
+    return 0;
 }

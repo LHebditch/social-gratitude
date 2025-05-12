@@ -2,9 +2,9 @@ import { mockClient } from 'aws-sdk-client-mock';
 import 'aws-sdk-client-mock-jest';
 
 import { BatchGetCommand, BatchWriteCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { handler, Streak } from '.';
+import { handler } from '.';
 import { Context, DynamoDBStreamEvent } from 'aws-lambda';
-
+import { Streak } from '../../../../lib/models/journal';
 
 const dynamoMock = mockClient(DynamoDBDocumentClient)
 

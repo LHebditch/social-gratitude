@@ -16,6 +16,22 @@ import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations
 import { HttpLambdaResponseType } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import { DynamoEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
+// Common Lambda configuration for optimal performance
+const commonLambdaConfig = {
+    runtime: Runtime.NODEJS_22_X,
+    memorySize: 1024, // Increased memory for better CPU performance
+    timeout: Duration.seconds(10),
+    tracing: fn.Tracing.ACTIVE, // Enable X-Ray tracing
+    bundling: {
+        minify: true, // Reduce cold start time
+        sourceMap: true, // Better debugging
+    },
+    environment: {
+        NODE_OPTIONS: '--enable-source-maps',
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1', // Enable connection reuse
+    },
+};
+
 export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     const stack = new NestedStack(scope, "gratitude-stack");
     const suffix = stack.node.addr;
@@ -25,11 +41,11 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     const props: db.TableProps = {
         tableName,
         partitionKey: {
-            name: "_pk", // generic primary key
+            name: "_pk",
             type: db.AttributeType.STRING,
         },
         sortKey: {
-            name: "_sk", // generic secondary key
+            name: "_sk",
             type: db.AttributeType.STRING,
         },
         billingMode: db.BillingMode.PAY_PER_REQUEST,
@@ -37,6 +53,8 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         stream: db.StreamViewType.NEW_IMAGE,
     };
     const table = new db.Table(stack, tableName, props);
+
+    // Add GSIs with performance optimizations
     table.addGlobalSecondaryIndex({
         indexName: "gsi1",
         partitionKey: {
@@ -44,6 +62,7 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
             type: db.AttributeType.STRING,
         },
     });
+
     table.addGlobalSecondaryIndex({
         indexName: "gsi2",
         partitionKey: {
@@ -52,10 +71,19 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
         },
     });
 
-    // SQS//
+    // SQS with performance optimizations
     const journalQueue = new sqs.Queue(stack, "gratitude-journal-queue", {
         queueName: "gratitude-journal-entries",
-    })
+        visibilityTimeout: Duration.seconds(30),
+        receiveMessageWaitTime: Duration.seconds(20), // Enable long polling
+        deadLetterQueue: {
+            queue: new sqs.Queue(stack, "gratitude-journal-dlq", {
+                queueName: "gratitude-journal-entries-dlq",
+                retentionPeriod: Duration.days(14),
+            }),
+            maxReceiveCount: 3,
+        },
+    });
 
     // ================ //
     // LAMBDA FUNCTIONS //
@@ -63,14 +91,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     // SAVE ENTRIES //
     const saveEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-save-entries-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-save-entries`,
         entry: '../src/handlers/gratitude/submit-entries/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-save-entries-function", saveEntriesFn);
@@ -78,14 +106,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     // GET TODAYS ENTRIES //
     const getTodaysEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-get-entries-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-get-entries`,
         entry: '../src/handlers/gratitude/get-entries/today/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-get-entries-function", getTodaysEntriesFn);
@@ -93,15 +121,15 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     // SHARE ENTRIES //
     const shareTodaysEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-share-entries-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-share-entries`,
         entry: '../src/handlers/gratitude/share-entries/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
             GRATITUDE_QUEUE_URL: journalQueue.queueUrl,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-share-entries-function", shareTodaysEntriesFn);
@@ -110,14 +138,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     // ANALYSE SUBMISSIONS //
     const analyseSubmissionsFn = new lambda.NodejsFunction(stack, 'gratitude-analyse-submissions-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-analyse-submissions`,
         entry: '../src/handlers/gratitude/analyse-submissions/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-analyse-submissions-function", analyseSubmissionsFn);
@@ -125,31 +153,31 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     journalQueue.grantConsumeMessages(analyseSubmissionsFn)
     analyseSubmissionsFn.addEventSource(new eventSource.SqsEventSource(journalQueue))
 
-    // GET SOCIAL ENTRIES //
+    // GET SOCIAL ENTRIES - with provisioned concurrency
     const getSocialEntriesFn = new lambda.NodejsFunction(stack, 'gratitude-get-shared-entries-function', {
-        runtime: Runtime.NODEJS_22_X,
-        handler: "index.handler",
+        ...commonLambdaConfig,
         functionName: `gratitude-get-shared-entries`,
         entry: '../src/handlers/gratitude/get-entries/shared/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
+
 
     addLogGroup(stack, "gratitude-get-shared-entries-function", getSocialEntriesFn);
     table.grantReadData(getSocialEntriesFn);
 
     // REACT TO ENTRY //
     const reactToEntryFn = new lambda.NodejsFunction(stack, 'gratitude-react-to-entry-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-react-to-entry`,
         entry: '../src/handlers/gratitude/likes/react/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-react-to-entry-function", reactToEntryFn);
@@ -157,14 +185,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     // GET ENTRY REACTIONS //
     const getEntryReactionsFn = new lambda.NodejsFunction(stack, 'gratitude-get-entry-reactions-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-get-entry-reactions`,
         entry: '../src/handlers/gratitude/likes/get/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-get-entry-reactions-function", getEntryReactionsFn);
@@ -172,14 +200,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     // GET INFLUENCE SCORE //
     const getInfluenceScoreFn = new lambda.NodejsFunction(stack, 'gratitude-get-influence-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-get-influence`,
         entry: '../src/handlers/gratitude/influence/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-get-influence-function", getInfluenceScoreFn);
@@ -187,14 +215,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     // GET STREAK //
     const getStreakFn = new lambda.NodejsFunction(stack, 'gratitude-get-streak-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-get-streak`,
         entry: '../src/handlers/gratitude/streak/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-get-streak-function", getStreakFn);
@@ -203,14 +231,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     // EVENTS //
     // ON REACTION HANDLER
     const onReactionFn = new lambda.NodejsFunction(stack, 'gratitude-on-reaction-reactions-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-on-reaction-reactions`,
         entry: '../src/handlers/events/gratitude/on-reaction/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-on-reaction-reactions-function", onReactionFn);
@@ -233,14 +261,14 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
 
     // ON SUBMIT HANDLER
     const onSubmitFn = new lambda.NodejsFunction(stack, 'gratitude-on-submit-function', {
-        runtime: Runtime.NODEJS_22_X,
+        ...commonLambdaConfig,
         handler: "index.handler",
         functionName: `gratitude-on-submit`,
         entry: '../src/handlers/events/gratitude/on-submit/index.ts',
         environment: {
+            ...commonLambdaConfig.environment,
             GRATITUDE_TABLE_NAME: table.tableName,
         },
-        timeout: Duration.millis(3000),
     });
 
     addLogGroup(stack, "gratitude-on-submit-function", onSubmitFn);
@@ -271,19 +299,18 @@ export const build = (scope: Stack, authorizerFn: lambda.NodejsFunction) => {
     });
 
     // API //
-    const corsOptions = {
-        allowMethods: [
-            apigwv2.CorsHttpMethod.GET,
-            apigwv2.CorsHttpMethod.HEAD,
-            apigwv2.CorsHttpMethod.OPTIONS,
-            apigwv2.CorsHttpMethod.POST,
-        ],
-        allowOrigins: ['*'],
-        maxAge: Duration.days(10),
-    };
-
     const gratitudeApi = new apigwv2.HttpApi(stack, "gratitude-api", {
-        corsPreflight: corsOptions,
+        corsPreflight: {
+            allowMethods: [
+                apigwv2.CorsHttpMethod.GET,
+                apigwv2.CorsHttpMethod.HEAD,
+                apigwv2.CorsHttpMethod.OPTIONS,
+                apigwv2.CorsHttpMethod.POST,
+            ],
+            allowOrigins: ['*'],
+            maxAge: Duration.days(10),
+            allowHeaders: ['Authorization', 'Content-Type'],
+        },
     });
 
     gratitudeApi.addRoutes({

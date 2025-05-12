@@ -1,9 +1,16 @@
-export const APIResponse = (status: number, body?: any) => {
+import { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
+
+export const APIResponse = (
+  statusCode: number,
+  body?: unknown,
+  headers?: Record<string, string>
+): APIGatewayProxyStructuredResultV2 => {
   return {
-    statusCode: status,
+    statusCode,
+    body: body ? JSON.stringify(body) : undefined,
     headers: {
       'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
+      ...headers,
+    }
   };
 };

@@ -8,8 +8,7 @@ import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIResponse } from "../../../../lib/response";
 import { formattedDate } from "../../utils";
 import { Entry } from "../../../../lib/models/journal";
-
-const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient());
+import { dynamo } from "../../../../lib/dynamo";
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -26,12 +25,20 @@ export type PaginatedEntryResponse = {
     nextToken?: string
 }
 
+// Cache TTL in seconds (5 minutes)
+const CACHE_TTL = 300;
+const CACHE_CONTROL_HEADER = `public, max-age=${CACHE_TTL}`;
+
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     try {
         // Get pagination token from query parameters
         const nextToken = event.queryStringParameters?.nextToken;
         const response = await getEntries(nextToken)
-        return APIResponse(200, response)
+
+        // Add cache control headers for API Gateway caching
+        return APIResponse(200, response, {
+            'Cache-Control': CACHE_CONTROL_HEADER
+        });
     } catch (e: unknown) {
         return handleError(e)
     }
@@ -51,7 +58,11 @@ const getEntries = async (nextToken?: string): Promise<PaginatedEntryResponse> =
                 ':id': `social/${formattedDate()}`
             },
             Limit: DEFAULT_PAGE_SIZE,
-            ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined
+            ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
+            // Only fetch the attributes we need
+            ProjectionExpression: 'entry, id, index, _pk',
+            // Enable strongly consistent reads for real-time data
+            ConsistentRead: true,
         });
 
         const { Items, LastEvaluatedKey } = await dynamo.send(getCommand);

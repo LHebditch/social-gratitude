@@ -59,8 +59,6 @@ const getEntries = async (nextToken?: string): Promise<PaginatedEntryResponse> =
             },
             Limit: DEFAULT_PAGE_SIZE,
             ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
-            // Enable strongly consistent reads for real-time data
-            ConsistentRead: true,
         });
 
         const { Items, LastEvaluatedKey } = await dynamo.send(getCommand);
